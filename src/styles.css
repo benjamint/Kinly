@@ -60,13 +60,21 @@ textarea {
 
 /* ---------- Elder screen ---------- */
 
-/* The portrait fills the screen; the clock, captions and tools sit on top of
-   it over soft dark gradients, like a video call. */
+/* Kinly's face fills the screen on warm clay; the clock, captions and tools
+   sit on top over soft darker gradients. */
 .elder {
+  --clay: #b8613f;
+  --clay-edge: #a9573a;
+  --kf-eye: #f6eee3;
+  --kf-pupil: #24121a;
+  --kf-lip: #4b1c2c;
+  --kf-mouth: #1e0a10;
+  --kf-tick: rgba(60, 20, 10, 0.35);
   position: relative;
   height: 100dvh;
   overflow: hidden;
-  background: #2b1d14;
+  background: radial-gradient(120% 90% at 50% 40%, var(--clay) 0%, var(--clay-edge) 100%);
+  transition: background 1.5s ease;
   color: #fff;
   user-select: none;
   display: grid;
@@ -87,14 +95,22 @@ textarea {
 
 .elder::before {
   top: 0;
-  height: 160px;
-  background: linear-gradient(rgba(20, 12, 8, 0.6), rgba(20, 12, 8, 0));
+  height: 140px;
+  background: linear-gradient(rgba(70, 25, 12, 0.35), rgba(70, 25, 12, 0));
 }
 
 .elder::after {
   bottom: 0;
-  height: min(52%, 420px);
-  background: linear-gradient(rgba(20, 12, 8, 0), rgba(20, 12, 8, 0.55) 35%, rgba(20, 12, 8, 0.88));
+  height: min(40%, 340px);
+  background: linear-gradient(rgba(70, 25, 12, 0), rgba(70, 25, 12, 0.45) 45%, rgba(60, 20, 10, 0.7));
+}
+
+/* Night: deep clay, lips lighten so they stay visible. */
+.elder--sleeping {
+  --clay: #5a2c1d;
+  --clay-edge: #4a2418;
+  --kf-lip: #c98a6e;
+  --kf-mouth: #2a120c;
 }
 
 .elder > :not(.elder__face) {
@@ -115,10 +131,61 @@ textarea {
   outline-offset: -6px;
 }
 
-.portrait {
-  display: block;
+.kinly-face {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 8%;
+  bottom: 30%;
   width: 100%;
-  height: 100%;
+  height: 62%;
+  overflow: visible;
+}
+
+.kf__sclera,
+.kf__closed {
+  fill: var(--kf-eye);
+  transition: fill 1.5s ease;
+}
+
+.kf__closed {
+  fill: none;
+  stroke: var(--kf-eye);
+  stroke-width: 7;
+  stroke-linecap: round;
+}
+
+.kf__pupil {
+  fill: var(--kf-pupil);
+}
+
+.kf__shine {
+  fill: #fff;
+  opacity: 0.85;
+}
+
+.kf__ticks path {
+  fill: none;
+  stroke: var(--kf-tick);
+  stroke-width: 5;
+  stroke-linecap: round;
+}
+
+.kf__lip {
+  fill: var(--kf-lip);
+  transition: fill 1.5s ease;
+}
+
+.kf__interior {
+  fill: var(--kf-mouth);
+}
+
+.kf__teeth {
+  fill: var(--kf-eye);
+}
+
+.kf__tongue {
+  fill: #8c3a4a;
 }
 
 .elder__top {
@@ -255,7 +322,7 @@ textarea {
 }
 
 .elder--concerned::after {
-  background: linear-gradient(rgba(60, 8, 8, 0), rgba(60, 8, 8, 0.55) 35%, rgba(60, 8, 8, 0.9));
+  background: linear-gradient(rgba(90, 10, 10, 0), rgba(90, 10, 10, 0.55) 35%, rgba(80, 8, 8, 0.85));
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -362,7 +429,12 @@ textarea {
     top: 0;
     width: min(40%, 420px);
     height: auto;
-    background: linear-gradient(90deg, rgba(20, 12, 8, 0), rgba(20, 12, 8, 0.75));
+    background: linear-gradient(90deg, rgba(70, 25, 12, 0), rgba(70, 25, 12, 0.45));
+  }
+  .kinly-face {
+    width: calc(100% - clamp(200px, 22vw, 260px) - 32px);
+    top: 6%;
+    height: 72%;
   }
   .elder::before {
     height: 140px;

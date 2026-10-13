@@ -55,7 +55,7 @@ Family dashboard (/family) ── /api/household
 - The agent's tools are **server webhooks**, not browser code. That is deliberate: the same agent can later be attached to a phone number (ElevenLabs + Twilio/SIP) for the PRD's telephony-first path with no rework.
 - The ElevenLabs API key never reaches the device. `/api/session` mints a short-lived conversation token and passes the elder's name, today's reminders and unread-message count to the agent.
 - Reminders: when one is due, the tablet chimes and Kinly asks about it. It asks again every 10 minutes, and after 30 minutes the reminder is logged as missed. A missed medication alerts the family. Quiet hours are respected.
-- Face states: idle (breathing, blinking, glancing around), listening (wide eyes plus a halo), thinking, speaking (mouth follows the voice), concerned (help or alert), and sleeping (quiet hours, night colours).
+- Kinly's face (`src/elder/KinlyFace.tsx`) is two flat, expressive eyes and a pair of lips on warm clay. Each mood sets a few numbers (how open the eyes are, squint, pupil size, smile) and springs animate towards them: relaxed at rest with the odd glance, curious widening or playful squint; wide-eyed while listening; a narrow sideways look while thinking; smiling eyes with lips that follow the voice while speaking; drooping eyes when concerned; and closed eyes on a darker clay during quiet hours.
 
 ## Project layout
 

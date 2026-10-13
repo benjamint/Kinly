@@ -7,7 +7,7 @@ import type { VoiceEngine } from "../lib/voice";
 import { isQuietTime, localClock, todaysReminders, unreadFamilyMessages } from "../shared/household";
 import type { Household } from "../shared/types";
 import type { Expression } from "./expression";
-import { Portrait } from "./Portrait";
+import { KinlyFace } from "./KinlyFace";
 import { HelpButton, HelpOverlay } from "./Help";
 import { FamilySheet, RemindersSheet, SettingsSheet } from "./Sheets";
 import { sayOnce, stayAwake } from "./sound";
@@ -136,7 +136,7 @@ export function ElderScreen() {
   return (
     <main className={`elder elder--${expression}`}>
       <button className="elder__face" onClick={onFaceTap} aria-label={hint}>
-        <Portrait expression={expression} getVolume={voice.getVolume} />
+        <KinlyFace expression={expression} getVolume={voice.getVolume} />
       </button>
 
       <header className="elder__top">
