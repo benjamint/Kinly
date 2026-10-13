@@ -152,18 +152,30 @@ function DashboardView({
   );
 }
 
-/** Shows whether Kinly's live voice is ready, and sets it up with one press. */
+/** Sets up Kinly's live voice with one press, and re-applies updated instructions later. */
 function VoiceCard() {
-  const { config, setupVoice } = useHousehold();
+  const { config, setupVoice, household } = useHousehold();
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<string | null>(null);
-  if (config.voice && !result) return null;
+  const ready = config.voice;
+  const elder = household?.elder.name ?? "the";
+  if (!ready && !config.voiceSetupAvailable) {
+    return (
+      <section className="card" aria-labelledby="voice-h">
+        <h2 id="voice-h">Kinly's voice</h2>
+        <p className="muted">
+          To use the real voice, add ELEVENLABS_API_KEY and KINLY_TOOL_SECRET in Vercel and redeploy.
+          {config.voiceError && ` (${config.voiceError})`}
+        </p>
+      </section>
+    );
+  }
   const run = async () => {
     setBusy(true);
     setResult(null);
     try {
       await setupVoice();
-      setResult("Kinly's voice is ready. Tap the face on the elder's screen to talk.");
+      setResult(ready ? "Kinly's voice is up to date." : `Kinly's voice is ready. Tap the screen on ${elder}'s tablet to talk.`);
     } catch (e) {
       setResult((e as Error).message);
     } finally {
@@ -173,21 +185,14 @@ function VoiceCard() {
   return (
     <section className="card" aria-labelledby="voice-h">
       <h2 id="voice-h">Kinly's voice</h2>
-      {config.voiceSetupAvailable ? (
-        <>
-          <p>Kinly is using the phone's practice voice. Set up the real ElevenLabs voice; this takes about 20 seconds.</p>
-          <button className="btn btn--primary" onClick={run} disabled={busy}>
-            {busy ? "Setting up…" : "Set up Kinly's voice"}
-          </button>
-        </>
-      ) : (
-        !result && (
-          <p className="muted">
-            To use the real voice, add ELEVENLABS_API_KEY and KINLY_TOOL_SECRET in Vercel and redeploy.
-            {config.voiceError && ` (${config.voiceError})`}
-          </p>
-        )
-      )}
+      <p className={ready ? "muted" : undefined}>
+        {ready
+          ? "The live voice is on. After Kinly's instructions change in an update, press this to apply them."
+          : "Kinly is using the phone's practice voice. Set up the real ElevenLabs voice; this takes about 20 seconds."}
+      </p>
+      <button className={ready ? "btn" : "btn btn--primary"} onClick={run} disabled={busy}>
+        {busy ? "Working…" : ready ? "Update Kinly's voice" : "Set up Kinly's voice"}
+      </button>
       {result && <p role="status">{result}</p>}
     </section>
   );
