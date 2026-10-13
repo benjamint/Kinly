@@ -5,26 +5,24 @@ A warm, full-screen talking face for older adults, with a family dashboard behin
 - **Elder screen (`/`)**: Kinly's face fills the screen. Tap the face to talk. Three big buttons: **Family** (hear messages, send one by voice), **Reminders** (today's medication and meals, "I've taken it"), **Help** (press and hold to alert the family).
 - **Family dashboard (`/family`)**: see alerts and today's reminder status, send messages that Kinly reads aloud, read the elder's spoken replies, set reminders, quiet hours, language and the family circle.
 
-## Two ways to run it
+## Signing in
 
-| | Demo mode | Live mode |
-|---|---|---|
-| Setup | none | Supabase + ElevenLabs + Vercel |
-| Voice | the phone's own speech, with simple built-in rules | ElevenLabs agent (speech → Claude → voice), natural conversation, can be interrupted |
-| Data | stays on that one device | shared between tablet, family phones and the agent |
+Every device signs in to a household with its **household code and PIN**. The sign-in screen is always the first thing shown. After that the device stays signed in until someone chooses **Sign out** in Settings (on the elder's screen, press and hold the clock for 2 seconds). If the PIN changes, devices are sent back to sign-in.
 
-### Demo mode (2 minutes)
+## Running it
+
+### On your computer (no accounts needed)
 
 ```bash
 npm install
-npm run dev
+KINLY_DEV_MEMORY=1 npm run dev
 ```
 
-Open the address it prints (use the `Network` one on your Android phone, same Wi-Fi), then tap **Try the demo on this device**. Open `/family` in a second tab to see the family side update live.
+Open the address it prints (use the `Network` one on your Android phone, same Wi-Fi) and sign in with household code `demo` and PIN `123456`. Open `/family` in a second tab to see the family side. This in-memory household resets when the dev server restarts; never set `KINLY_DEV_MEMORY` in production.
 
-> Speech recognition in demo mode needs Chrome on Android (or desktop Chrome). The demo understands things like "yes, I've taken it", "any messages?", "tell Esi I miss the children", "what are my reminders" and "help". Saying anything about pain, a fall or asking for help raises an alert.
+Without ElevenLabs configured, Kinly uses a **practice voice**: the phone's own speech with simple built-in rules. It understands things like "yes, I've taken it", "any messages?", "tell Esi I miss the children", "what are my reminders" and "help". Speech recognition needs Chrome.
 
-### Live mode
+### Live (Supabase + ElevenLabs + Vercel)
 
 1. **Supabase**: create a project. In the SQL Editor, paste `supabase/setup.sql`, change the household code and PIN on the two marked lines, and run it. From Project Settings → API, note the Project URL and the **service_role** key.
 2. **Vercel**: import this repo at vercel.com/new (the framework is detected as Vite). Before deploying, add these environment variables:
@@ -51,7 +49,7 @@ Elder tablet (PWA face) ──WebRTC──▶ ElevenLabs agent (ASR → Claude �
 Family dashboard (/family) ── /api/household
 ```
 
-- `src/shared/household.ts` is the single source of truth for state changes (`applyAction`). The browser demo, the API and the agent's tools all run it, so a reminder confirmed by tap, by voice or (later) over a phone call is recorded the same way.
+- `src/shared/household.ts` is the single source of truth for state changes (`applyAction`). The screens, the API and the agent's tools all run it, so a reminder confirmed by tap, by voice or (later) over a phone call is recorded the same way.
 - The agent's tools are **server webhooks**, not browser code. That is deliberate: the same agent can later be attached to a phone number (ElevenLabs + Twilio/SIP) for the PRD's telephony-first path with no rework.
 - The ElevenLabs API key never reaches the device. `/api/session` mints a short-lived conversation token and passes the elder's name, today's reminders and unread-message count to the agent.
 - Reminders: when one is due, the tablet chimes and Kinly asks about it. It asks again every 10 minutes, and after 30 minutes the reminder is logged as missed. A missed medication alerts the family. Quiet hours are respected.
@@ -62,13 +60,13 @@ Family dashboard (/family) ── /api/household
 ```
 src/elder/        face, elder screen, sheets, help button, reminder scheduler
 src/family/       family dashboard
-src/lib/          household data (local or cloud), voice engines (ElevenLabs + demo)
+src/lib/          household data and sign-in, voice engines (ElevenLabs + practice voice)
 src/shared/       data model and state logic shared with the server
 server/           API handlers + Supabase store (used by Vercel and the dev server)
 api/              Vercel function entry points
 agent/            agent prompt and tool definitions (pushed to ElevenLabs by the setup button)
 scripts/          sync-agent, create-household
-tests/            vitest: state logic, demo brain, scheduler, API + tools
+tests/            vitest: state logic, practice-voice rules, scheduler, API + tools
 ```
 
 `npm test` runs the tests, `npm run typecheck` the types, `npm run build` the production build.

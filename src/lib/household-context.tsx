@@ -1,14 +1,13 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { applyAction, demoHousehold } from "../shared/household";
+import { applyAction } from "../shared/household";
 import type { Household, HouseholdAction } from "../shared/types";
 
-// Two ways to hold a household:
-//  - "local": everything lives in this browser (localStorage, synced across
-//    tabs). Works with no backend at all, ideal for a quick demo.
-//  - "cloud": the household lives on the server (Supabase via /api), so the
-//    elder's tablet, the family's phones and the voice agent share it.
+// The household lives on the server (Supabase via /api), so the elder's
+// tablet, the family's phones and the voice agent all share it. A device
+// joins with the household code and PIN once and stays signed in until
+// someone signs out.
 
-export type Connection = { mode: "local" } | { mode: "cloud"; id: string; pin: string };
+export type Connection = { mode: "cloud"; id: string; pin: string };
 
 interface ServerConfig {
   cloud: boolean;
@@ -38,8 +37,23 @@ interface HouseholdContextValue {
 }
 
 const CONNECTION_KEY = "kinly.connection";
-const LOCAL_KEY = "kinly.household";
+const OLD_DEMO_KEY = "kinly.household";
 const POLL_MS = 5000;
+
+class ApiError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message);
+  }
+}
+
+/** The saved sign-in, if it is a real household (old demo sign-ins are dropped). */
+function savedConnection(): Connection | null {
+  const saved = readJson<Partial<Connection>>(CONNECTION_KEY);
+  if (saved?.mode === "cloud" && saved.id && saved.pin) return saved as Connection;
+  writeJson(CONNECTION_KEY, null);
+  writeJson(OLD_DEMO_KEY, null);
+  return null;
+}
 
 const Ctx = createContext<HouseholdContextValue | null>(null);
 
@@ -61,39 +75,26 @@ function writeJson(key: string, value: unknown) {
   }
 }
 
-async function api<T>(path: string, connection: Connection & { mode: "cloud" }, body?: unknown): Promise<T> {
+async function api<T>(path: string, connection: Connection, body?: unknown): Promise<T> {
   const res = await fetch(`/api/${path}?id=${encodeURIComponent(connection.id)}`, {
     method: body ? "POST" : "GET",
     headers: { "x-kinly-pin": connection.pin, ...(body ? { "content-type": "application/json" } : {}) },
     body: body ? JSON.stringify(body) : undefined,
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error((data as { error?: string }).error ?? `Request failed (${res.status}).`);
+  if (!res.ok) throw new ApiError((data as { error?: string }).error ?? `Request failed (${res.status}).`, res.status);
   return data as T;
 }
 
 export function fetchSession(connection: Connection) {
-  if (connection.mode !== "cloud") throw new Error("Voice needs a cloud household.");
   return api<{ token: string; dynamicVariables: Record<string, string | number> }>("session", connection);
-}
-
-function loadLocal(): Household {
-  const stored = readJson<Household>(LOCAL_KEY);
-  if (stored) return stored;
-  const fresh = demoHousehold("local", Intl.DateTimeFormat().resolvedOptions().timeZone);
-  writeJson(LOCAL_KEY, fresh);
-  return fresh;
 }
 
 export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   const [config, setConfig] = useState<ServerConfig>({ cloud: false, voice: false });
-  const [connection, setConnection] = useState<Connection | null>(() => readJson(CONNECTION_KEY));
+  const [connection, setConnection] = useState<Connection | null>(savedConnection);
   const [household, setHousehold] = useState<Household | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const channel = useMemo(
-    () => (typeof BroadcastChannel !== "undefined" ? new BroadcastChannel("kinly") : null),
-    [],
-  );
   const householdRef = useRef(household);
   householdRef.current = household;
   const pullRef = useRef<() => void>(() => {});
@@ -104,7 +105,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
         .then((r) => (r.ok ? r.json() : null))
         .then((c: ServerConfig | null) => c && setConfig(c))
         .catch(() => {
-          /* static hosting, no API: local mode only */
+          /* offline: the sign-in screen explains */
         }),
     [],
   );
@@ -114,16 +115,6 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     pullRef.current = () => {};
     if (!connection) return setHousehold(null);
-    if (connection.mode === "local") {
-      setHousehold(loadLocal());
-      const onMsg = () => setHousehold(loadLocal());
-      channel?.addEventListener("message", onMsg);
-      window.addEventListener("storage", onMsg);
-      return () => {
-        channel?.removeEventListener("message", onMsg);
-        window.removeEventListener("storage", onMsg);
-      };
-    }
     let cancelled = false;
     const pull = () =>
       api<Household>("household", connection)
@@ -133,7 +124,15 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
             setError(null);
           }
         })
-        .catch((e: Error) => !cancelled && setError(e.message));
+        .catch((e: Error) => {
+          if (cancelled) return;
+          // The PIN was changed or the household removed: back to sign-in.
+          if (e instanceof ApiError && e.status === 401) {
+            writeJson(CONNECTION_KEY, null);
+            setConnection(null);
+          }
+          setError(e.message);
+        });
     pullRef.current = pull;
     pull();
     const timer = setInterval(pull, POLL_MS);
@@ -144,19 +143,11 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
       clearInterval(timer);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [connection, channel]);
+  }, [connection]);
 
   const dispatch = useCallback(
     async (...actions: HouseholdAction[]) => {
       if (!connection || actions.length === 0) return;
-      if (connection.mode === "local") {
-        const now = new Date();
-        const next = actions.reduce((h, a) => applyAction(h, a, now), loadLocal());
-        writeJson(LOCAL_KEY, next);
-        setHousehold(next);
-        channel?.postMessage("changed");
-        return;
-      }
       // Optimistic update, then take the server's answer as truth.
       const current = householdRef.current;
       if (current) setHousehold(actions.reduce((h, a) => applyAction(h, a), current));
@@ -167,11 +158,12 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
         setError((e as Error).message);
       }
     },
-    [connection, channel],
+    [connection],
   );
 
   const connect = useCallback(async (next: Connection) => {
-    if (next.mode === "cloud") await api<Household>("household", next); // verify PIN first
+    await api<Household>("household", next); // verify the code and PIN first
+    setError(null);
     writeJson(CONNECTION_KEY, next);
     setConnection(next);
   }, []);
@@ -185,14 +177,14 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
 
   const post = useCallback(
     <T,>(path: string, body: unknown) => {
-      if (connection?.mode !== "cloud") return Promise.reject(new Error("Join a household first."));
+      if (!connection) return Promise.reject(new Error("Join a household first."));
       return api<T>(path, connection, body);
     },
     [connection],
   );
 
   const setupVoice = useCallback(async () => {
-    if (connection?.mode !== "cloud") throw new Error("Join a household first.");
+    if (!connection) throw new Error("Join a household first.");
     await api("setup-voice", connection, {});
     await loadConfig();
   }, [connection, loadConfig]);

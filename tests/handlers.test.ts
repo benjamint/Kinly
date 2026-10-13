@@ -78,3 +78,15 @@ describe("agent tools", () => {
     expect(h.alerts.at(-1)).toMatchObject({ source: "voice", reason: "Said she fell" });
   });
 });
+
+describe("local development household", () => {
+  it("is only served when KINLY_DEV_MEMORY=1, with code demo and PIN 123456", async () => {
+    const { envFromProcess } = await import("../server/handlers");
+    expect(envFromProcess({} as NodeJS.ProcessEnv).store).toBeNull();
+    const dev = envFromProcess({ KINLY_DEV_MEMORY: "1" } as NodeJS.ProcessEnv);
+    const ok = await handleHousehold(dev, req({ query: { id: "demo" }, headers: { "x-kinly-pin": "123456" } }));
+    expect(ok.status).toBe(200);
+    const bad = await handleHousehold(dev, req({ query: { id: "demo" }, headers: { "x-kinly-pin": "000000" } }));
+    expect(bad.status).toBe(401);
+  });
+});

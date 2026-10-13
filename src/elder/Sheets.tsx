@@ -179,7 +179,7 @@ export function SettingsSheet({ household, onClose }: { household: Household; on
           Open family dashboard
         </Link>
         <button className="small-button" onClick={disconnect}>
-          {connection?.mode === "cloud" ? `Leave household ${connection.id}` : "Leave demo"}
+          {connection ? `Sign out of household ${connection.id}` : "Sign out"}
         </button>
       </div>
     </Sheet>

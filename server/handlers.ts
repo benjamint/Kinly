@@ -1,6 +1,7 @@
-import { timingSafeEqual } from "node:crypto";
+import { createHash, timingSafeEqual } from "node:crypto";
 import {
   agentContext,
+  demoHousehold,
   localClock,
   overdueReminders,
   todaysReminders,
@@ -17,7 +18,7 @@ import {
   type PushRecord,
   type PushSender,
 } from "./push.js";
-import { mutate, sha256, SupabaseStore, update, type HouseholdStore } from "./store.js";
+import { MemoryStore, mutate, sha256, SupabaseStore, update, type HouseholdStore } from "./store.js";
 
 // Framework-agnostic request handlers. `api/*.ts` adapts them for Vercel and
 // vite.config.ts mounts them on the dev server, so both run the same code.
@@ -47,12 +48,29 @@ export interface ServerEnv {
   fetch: typeof fetch;
 }
 
+// Local development without Supabase: KINLY_DEV_MEMORY=1 serves one demo
+// household (code "demo", PIN "123456") from memory. Never set it in production.
+let devStore: MemoryStore | null = null;
+function devMemoryStore(): MemoryStore {
+  if (!devStore) {
+    devStore = new MemoryStore();
+    devStore.rows.set("demo", {
+      household: demoHousehold("demo", process.env.KINLY_DEV_TZ || "Africa/Accra"),
+      pinHash: createHash("sha256").update("demo:123456").digest("hex"),
+      version: 0,
+    });
+  }
+  return devStore;
+}
+
 export function envFromProcess(env: NodeJS.ProcessEnv = process.env): ServerEnv {
   return {
     store:
       env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY
         ? new SupabaseStore(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY)
-        : null,
+        : env.KINLY_DEV_MEMORY === "1"
+          ? devMemoryStore()
+          : null,
     elevenLabsApiKey: env.ELEVENLABS_API_KEY,
     elevenLabsAgentId: env.ELEVENLABS_AGENT_ID,
     toolSecret: env.KINLY_TOOL_SECRET,

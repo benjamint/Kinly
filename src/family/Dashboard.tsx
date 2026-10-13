@@ -39,7 +39,7 @@ function useNow() {
 }
 
 export function Dashboard() {
-  const { household, dispatch, connection, error, disconnect } = useHousehold();
+  const { household, dispatch, error, disconnect } = useHousehold();
   const now = useNow();
   if (!household) return null;
   return (
@@ -47,7 +47,6 @@ export function Dashboard() {
       household={household}
       now={now}
       dispatch={dispatch}
-      mode={connection?.mode ?? "local"}
       error={error}
       onLeave={disconnect}
     />
@@ -58,14 +57,12 @@ function DashboardView({
   household,
   now,
   dispatch,
-  mode,
   error,
   onLeave,
 }: {
   household: Household;
   now: Date;
   dispatch: ReturnType<typeof useHousehold>["dispatch"];
-  mode: "local" | "cloud";
   error: string | null;
   onLeave: () => void;
 }) {
@@ -80,7 +77,7 @@ function DashboardView({
         <div>
           <h1>{elder}'s Kinly</h1>
           <p className="dash__sub">
-            {mode === "local" ? "Demo on this device" : `Household ${household.id}`} ·{" "}
+            {`Household ${household.id}`} ·{" "}
             <Link to="/">Open {elder}'s screen</Link>
           </p>
         </div>
@@ -118,7 +115,7 @@ function DashboardView({
         </section>
       )}
 
-      {mode === "cloud" && <AlertsCard me={me} />}
+      <AlertsCard me={me} />
 
       <div className="dash__grid">
         <section className="card" aria-labelledby="today-h">
@@ -140,12 +137,12 @@ function DashboardView({
         <Messages household={household} me={me} dispatch={dispatch} now={now} />
       </div>
 
-      {mode === "cloud" && <VoiceCard />}
+      <VoiceCard />
       <ReminderEditor household={household} dispatch={dispatch} />
       <SettingsCard household={household} dispatch={dispatch} />
       <p className="dash__foot">
         <button className="link" onClick={onLeave}>
-          {mode === "local" ? "Leave demo" : "Sign out of this household"}
+          Sign out of this household
         </button>
       </p>
     </div>
