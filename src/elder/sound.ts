@@ -23,6 +23,29 @@ export function chime() {
   }
 }
 
+const DRUM_NOTES = [196, 247, 294, 392];
+
+/** A short, warm drum-like tone for drum memory (0–3). */
+export function drum(i: number) {
+  try {
+    ctx ??= new AudioContext();
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(DRUM_NOTES[i % DRUM_NOTES.length] * 1.5, now);
+    osc.frequency.exponentialRampToValueAtTime(DRUM_NOTES[i % DRUM_NOTES.length], now + 0.08);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.5, now + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.65);
+  } catch {
+    /* audio unavailable */
+  }
+}
+
 let wakeLock: { released: boolean } | null = null;
 
 /** Keep the screen on and go full screen, so the face is always there. */

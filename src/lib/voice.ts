@@ -14,6 +14,8 @@ export interface StartOptions {
   replyTo?: string;
   /** Background for the live agent about why this conversation started. */
   context?: string;
+  /** Help and reminders always get the live voice; "chat" counts against the daily limit. */
+  purpose?: "help" | "reminder" | "chat";
 }
 
 export interface VoiceEngine {

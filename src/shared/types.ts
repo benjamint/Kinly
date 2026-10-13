@@ -15,6 +15,16 @@ export interface ElderSettings {
   showCaptions: boolean;
   /** Local "HH:MM" window in which Kinly stays quiet. */
   quietHours: { start: string; end: string };
+  /** Town for the weather on the Today board, with its coordinates. */
+  town?: string;
+  lat?: number;
+  lon?: number;
+  /** Money word for market maths, e.g. "cedis". Defaults from the time zone. */
+  currency?: string;
+  /** Family can switch chair exercises off (e.g. after a fall). Default on. */
+  exercisesEnabled?: boolean;
+  /** Daily minutes of live (paid) voice for chatting; 0 or unset = no limit. Help and reminders are never limited. */
+  voiceMinutesPerDay?: number;
 }
 
 export interface FamilyMember {
@@ -70,6 +80,27 @@ export interface Alert {
   acknowledgedBy?: string;
 }
 
+export type Game = "pairs" | "proverbs" | "drums" | "maths" | "exercises" | "today";
+
+export interface ActivityResult {
+  id: string;
+  game: Game;
+  at: string;
+  /** How long it was played. */
+  seconds: number;
+  /** 0–1: how well it went (used to pick the next level). */
+  score: number;
+  level: number;
+}
+
+/** Something coming up that the family wants on the Today board. */
+export interface UpcomingEvent {
+  id: string;
+  /** Local date "YYYY-MM-DD". */
+  date: string;
+  text: string;
+}
+
 export interface Household {
   id: string;
   /** When Kinly started looking after this household; earlier reminders are never reported missed. */
@@ -80,6 +111,10 @@ export interface Household {
   logs: ReminderLog[];
   messages: Message[];
   alerts: Alert[];
+  activityLog?: ActivityResult[];
+  events?: UpcomingEvent[];
+  /** Seconds of live voice used per local date (last 14 days). */
+  voiceUsage?: Record<string, number>;
   /** Server-only: family phones subscribed to push alerts. Never sent to browsers. */
   push?: {
     endpoint: string;
@@ -101,4 +136,8 @@ export type HouseholdAction =
   | { type: "acknowledgeAlert"; alertId: string; by: string }
   | { type: "updateElder"; patch: Partial<ElderSettings> }
   | { type: "saveFamilyMember"; member: FamilyMember }
-  | { type: "deleteFamilyMember"; memberId: string };
+  | { type: "deleteFamilyMember"; memberId: string }
+  | { type: "logActivity"; result: Omit<ActivityResult, "id" | "at"> }
+  | { type: "saveEvent"; event: UpcomingEvent }
+  | { type: "deleteEvent"; eventId: string }
+  | { type: "logVoiceUsage"; date: string; seconds: number };

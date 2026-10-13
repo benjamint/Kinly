@@ -40,8 +40,12 @@ const CONNECTION_KEY = "kinly.connection";
 const OLD_DEMO_KEY = "kinly.household";
 const POLL_MS = 5000;
 
-class ApiError extends Error {
-  constructor(message: string, readonly status: number) {
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly code?: string,
+  ) {
     super(message);
   }
 }
@@ -75,19 +79,27 @@ function writeJson(key: string, value: unknown) {
   }
 }
 
-async function api<T>(path: string, connection: Connection, body?: unknown): Promise<T> {
-  const res = await fetch(`/api/${path}?id=${encodeURIComponent(connection.id)}`, {
+async function api<T>(path: string, connection: Connection, body?: unknown, query = ""): Promise<T> {
+  const res = await fetch(`/api/${path}?id=${encodeURIComponent(connection.id)}${query}`, {
     method: body ? "POST" : "GET",
     headers: { "x-kinly-pin": connection.pin, ...(body ? { "content-type": "application/json" } : {}) },
     body: body ? JSON.stringify(body) : undefined,
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new ApiError((data as { error?: string }).error ?? `Request failed (${res.status}).`, res.status);
+  if (!res.ok) {
+    const { error, code } = data as { error?: string; code?: string };
+    throw new ApiError(error ?? `Request failed (${res.status}).`, res.status, code);
+  }
   return data as T;
 }
 
-export function fetchSession(connection: Connection) {
-  return api<{ token: string; dynamicVariables: Record<string, string | number> }>("session", connection);
+export function fetchSession(connection: Connection, purpose: "help" | "reminder" | "chat" = "chat") {
+  return api<{ token: string; dynamicVariables: Record<string, string | number>; minutesLeft: number | null }>(
+    "session",
+    connection,
+    undefined,
+    `&purpose=${purpose}`,
+  );
 }
 
 export function HouseholdProvider({ children }: { children: React.ReactNode }) {

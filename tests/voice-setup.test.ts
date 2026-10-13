@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { handleConfig, handleSession, handleSetupVoice, resetAgentCache, type ApiRequest, type ServerEnv } from "../server/handlers";
+import { handleConfig, handleHousehold, handleSession, handleSetupVoice, resetAgentCache, type ApiRequest, type ServerEnv } from "../server/handlers";
 import { MemoryStore, sha256 } from "../server/store";
 import { demoHousehold } from "../src/shared/household";
 
@@ -90,5 +90,43 @@ describe("agent config", () => {
     await handleSetupVoice(env, req({ method: "POST" }));
     const body = el.agents[0].body as { conversation_config: { tts: { model_id: string } } };
     expect(body.conversation_config.tts.model_id).toBe("eleven_flash_v2");
+  });
+});
+
+describe("daily voice limit", () => {
+  const today = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Accra" }).format(new Date());
+  const capHousehold = async (minutes: number, usedSeconds: number) => {
+    const row = (await env.store!.load("ama"))!;
+    const h = { ...row.household, elder: { ...row.household.elder, voiceMinutesPerDay: minutes }, voiceUsage: { [today()]: usedSeconds } };
+    await env.store!.save("ama", h, row.version);
+  };
+
+  it("refuses chat once today's minutes are used, but never Help or reminders", async () => {
+    await handleSetupVoice(env, req({ method: "POST" }));
+    await capHousehold(10, 600);
+    const chat = await handleSession(env, req({ query: { id: "ama", purpose: "chat" } }));
+    expect(chat.status).toBe(429);
+    expect(chat.body).toMatchObject({ code: "voice_cap" });
+    expect((await handleSession(env, req({ query: { id: "ama", purpose: "help" } }))).status).toBe(200);
+    expect((await handleSession(env, req({ query: { id: "ama", purpose: "reminder" } }))).status).toBe(200);
+  });
+
+  it("tells the screen how many chat minutes are left", async () => {
+    await handleSetupVoice(env, req({ method: "POST" }));
+    await capHousehold(10, 240);
+    const res = await handleSession(env, req({ query: { id: "ama", purpose: "chat" } }));
+    expect(res.body).toMatchObject({ minutesLeft: 6 });
+  });
+
+  it("lets the screen record new activity, event and usage actions", async () => {
+    const res = await handleHousehold(env, req({
+      method: "POST",
+      body: { actions: [
+        { type: "logActivity", result: { game: "pairs", seconds: 120, score: 1, level: 1 } },
+        { type: "saveEvent", event: { id: "e1", date: "2030-01-01", text: "Party" } },
+        { type: "logVoiceUsage", date: today(), seconds: 30 },
+      ] },
+    }));
+    expect(res.status).toBe(200);
   });
 });

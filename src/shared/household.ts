@@ -6,6 +6,9 @@ export const MISSED_AFTER_MINUTES = 30;
 const MAX_LOGS = 500;
 const MAX_MESSAGES = 200;
 const MAX_ALERTS = 100;
+const MAX_ACTIVITIES = 300;
+const MAX_EVENTS = 50;
+const VOICE_USAGE_DAYS = 14;
 
 export function newId(): string {
   return globalThis.crypto.randomUUID();
@@ -212,7 +215,51 @@ export function applyAction(
     }
     case "deleteFamilyMember":
       return { ...household, family: household.family.filter((f) => f.id !== action.memberId) };
+    case "logActivity": {
+      const r = action.result;
+      const result = {
+        ...r,
+        id: newId(),
+        at,
+        seconds: Math.max(0, Math.min(3600, Math.round(r.seconds))),
+        score: Math.max(0, Math.min(1, r.score)),
+        level: Math.max(1, Math.min(3, Math.round(r.level))),
+      };
+      return { ...household, activityLog: [...(household.activityLog ?? []), result].slice(-MAX_ACTIVITIES) };
+    }
+    case "saveEvent": {
+      const event = { ...action.event, text: action.event.text.trim().slice(0, 200) };
+      const rest = (household.events ?? []).filter((e) => e.id !== event.id);
+      return {
+        ...household,
+        events: [...rest, event].sort((a, b) => a.date.localeCompare(b.date)).slice(-MAX_EVENTS),
+      };
+    }
+    case "deleteEvent":
+      return { ...household, events: (household.events ?? []).filter((e) => e.id !== action.eventId) };
+    case "logVoiceUsage": {
+      const usage = { ...(household.voiceUsage ?? {}) };
+      usage[action.date] = (usage[action.date] ?? 0) + Math.max(0, Math.min(7200, Math.round(action.seconds)));
+      const keep = Object.keys(usage).sort().slice(-VOICE_USAGE_DAYS);
+      return { ...household, voiceUsage: Object.fromEntries(keep.map((d) => [d, usage[d]])) };
+    }
   }
+}
+
+/** Live-voice minutes left today for chatting, or null when there is no limit. */
+export function voiceMinutesLeft(household: Household, now: Date = new Date()): number | null {
+  const cap = household.elder.voiceMinutesPerDay;
+  if (!cap) return null;
+  const { date } = localClock(now, household.elder.timezone);
+  const used = (household.voiceUsage?.[date] ?? 0) / 60;
+  return Math.max(0, cap - used);
+}
+
+/** Upcoming family events from today on, soonest first. */
+export function upcomingEvents(household: Household, now: Date = new Date(), days = 14) {
+  const { date } = localClock(now, household.elder.timezone);
+  const until = localClock(new Date(now.getTime() + days * 86_400_000), household.elder.timezone).date;
+  return (household.events ?? []).filter((e) => e.date >= date && e.date <= until);
 }
 
 /** A friendly starting household so the prototype has something to show. */

@@ -4,7 +4,7 @@ import { useHousehold } from "../lib/household-context";
 import { localClock, todaysReminders, unreadFamilyMessages } from "../shared/household";
 import type { Household, Language } from "../shared/types";
 
-function Sheet({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+export function Sheet({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
     <div className="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
       <header className="sheet__head">

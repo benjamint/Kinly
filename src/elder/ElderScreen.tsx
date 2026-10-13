@@ -3,9 +3,10 @@ import { useHousehold } from "../lib/household-context";
 import { useDemoVoice } from "../lib/useDemoVoice";
 import { useElevenLabsVoice } from "../lib/useElevenLabsVoice";
 import { introduction, reminderPrompt, whoPrompt } from "../lib/demo-brain";
-import type { VoiceEngine } from "../lib/voice";
-import { isQuietTime, localClock, todaysReminders, unreadFamilyMessages } from "../shared/household";
-import type { Household } from "../shared/types";
+import type { StartOptions, VoiceEngine } from "../lib/voice";
+import { isQuietTime, localClock, todaysReminders, unreadFamilyMessages, voiceMinutesLeft } from "../shared/household";
+import type { Game, Household } from "../shared/types";
+import { ActivitiesSheet, ActivityScreen } from "./activities/Activities";
 import type { Expression } from "./expression";
 import { KinlyFace } from "./KinlyFace";
 import { HelpButton, HelpOverlay } from "./Help";
@@ -14,7 +15,7 @@ import { stayAwake } from "./sound";
 import { useReminderScheduler } from "./useReminderScheduler";
 import { useLongPress } from "./useLongPress";
 
-type Sheet = "family" | "reminders" | "settings" | null;
+type Sheet = "family" | "reminders" | "settings" | "activities" | null;
 
 const INTRO_KEY = "kinly.introducedOn";
 
@@ -75,12 +76,45 @@ function Clock({ household, now, onLongPress }: { household: Household; now: Dat
 
 export function ElderScreen() {
   const { household, connection, config, dispatch, refresh } = useHousehold();
-  const live = connection?.mode === "cloud" && config.voice;
+  const live = Boolean(connection) && config.voice;
+  // Which voice the current conversation uses: Kinly's live voice, or the free
+  // practice voice once today's chat minutes are used up.
+  const [engine, setEngine] = useState<"live" | "free">("live");
   const demoVoice = useDemoVoice(household, dispatch);
-  const liveVoice = useElevenLabsVoice(connection, household, refresh);
-  const voice: VoiceEngine = live ? liveVoice : demoVoice;
+  const onUsage = useCallback(
+    (seconds: number) => {
+      if (!household || seconds < 1) return;
+      const { date } = localClock(new Date(), household.elder.timezone);
+      void dispatch({ type: "logVoiceUsage", date, seconds });
+    },
+    [household, dispatch],
+  );
+  const onCapReached = useCallback(
+    (options: StartOptions) => {
+      setEngine("free");
+      demoVoice.start(options);
+    },
+    [demoVoice],
+  );
+  const liveVoice = useElevenLabsVoice(connection, household, refresh, onUsage, onCapReached);
+  const capUsed = household ? voiceMinutesLeft(household) === 0 : false;
+  const active = live && engine === "live" ? liveVoice : demoVoice;
+  const voice: VoiceEngine = {
+    ...active,
+    start: (options: StartOptions = {}) => {
+      const essential = options.purpose === "help" || options.purpose === "reminder";
+      if (live && (essential || !capUsed)) {
+        setEngine("live");
+        liveVoice.start(options);
+      } else {
+        setEngine("free");
+        demoVoice.start(options);
+      }
+    },
+  };
 
   const [sheet, setSheet] = useState<Sheet>(null);
+  const [activity, setActivity] = useState<Game | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
   const now = useNow();
   const busy = voice.state !== "idle" && voice.state !== "error";
@@ -89,7 +123,8 @@ export function ElderScreen() {
     (reminderId: string) => {
       if (!household) return;
       setSheet(null);
-      voice.start({ reminderId, firstMessage: reminderPrompt(household, reminderId) });
+      setActivity(null);
+      voice.start({ reminderId, purpose: "reminder", firstMessage: reminderPrompt(household, reminderId) });
     },
     [household, voice],
   );
@@ -155,7 +190,9 @@ export function ElderScreen() {
         <Clock household={household} now={now} onLongPress={() => setSheet("settings")} />
         <div className="elder__badges">
           <span className="elder__badge elder__badge--ai">Kinly · AI assistant</span>
-          {!live && <span className="elder__badge">Practice voice</span>}
+          {(!live || capUsed) && (
+            <span className="elder__badge">{live ? "Practice voice · today's minutes used" : "Practice voice"}</span>
+          )}
         </div>
       </header>
 
@@ -195,13 +232,21 @@ export function ElderScreen() {
           <span className="tool__label">Reminders</span>
           {due > 0 && <span className="tool__count" aria-label={`${due} due now`}>{due}</span>}
         </button>
+        <button className="tool tool--activities" onClick={() => { voice.stop(); setSheet("activities"); }}>
+          <span className="tool__icon" aria-hidden="true">
+            <svg viewBox="0 0 48 48"><path d="M24 4l5.6 12.4L43 18l-10 9.3L35.6 41 24 34.4 12.4 41 15 27.3 5 18l13.4-1.6z" /></svg>
+          </span>
+          <span className="tool__label">{household.elder.language === "sw" ? "Michezo" : "Activities"}</span>
+        </button>
         <HelpButton
           onHelp={() => {
             setSheet(null);
             setHelpOpen(true);
             void dispatch({ type: "raiseAlert", source: "button", reason: "Pressed the Help button." });
             // Kinly's own voice tells them help is coming, then stays and talks with them.
+            setActivity(null);
             voice.start({
+              purpose: "help",
               firstMessage: helpLine(household, familyNames),
               context:
                 `${household.elder.name} just pressed the Help button. ${familyNames} have ALREADY been alerted, ` +
@@ -234,6 +279,26 @@ export function ElderScreen() {
         <RemindersSheet household={household} now={now} onClose={() => setSheet(null)} onAsk={startReminder} />
       )}
       {sheet === "settings" && <SettingsSheet household={household} onClose={() => setSheet(null)} />}
+      {sheet === "activities" && (
+        <ActivitiesSheet
+          household={household}
+          onClose={() => setSheet(null)}
+          onOpen={(game) => {
+            setSheet(null);
+            setActivity(game);
+          }}
+        />
+      )}
+      {activity && (
+        <ActivityScreen
+          household={household}
+          game={activity}
+          onClose={() => {
+            setActivity(null);
+            setSheet("activities");
+          }}
+        />
+      )}
       {helpOpen && <HelpOverlay household={household} familyNames={familyNames} onClose={() => setHelpOpen(false)} />}
     </main>
   );

@@ -3,6 +3,7 @@
 A warm, full-screen talking face for older adults, with a family dashboard behind it. It's the first prototype for the [Kinly PRD](#how-this-maps-to-the-prd) (voice, language and access).
 
 - **Elder screen (`/`)**: Kinly's face fills the screen. Tap the face to talk. Three big buttons: **Family** (hear messages, send one by voice), **Reminders** (today's medication and meals, "I've taken it"), **Help** (press and hold to alert the family).
+- **Activities** (free, no AI voice minutes): a Today board (day, date, weather, today's plan, what's coming up), brain games (matching pairs with local foods, finish the proverb, drum memory, market maths) that adapt their difficulty and never mark anything "wrong", and gentle chair exercises with spoken counting. They speak with the phone's own voice, so they cost nothing per use.
 - **Family dashboard (`/family`)**: see alerts and today's reminder status, send messages that Kinly reads aloud, read the elder's spoken replies, set reminders, quiet hours, language and the family circle.
 
 ## Signing in
@@ -34,6 +35,10 @@ Without ElevenLabs configured, Kinly uses a **practice voice**: the phone's own 
 5. On the Android tablet, open the site in Chrome, join the same household, then use **⋮ → Add to Home screen**. It opens full screen and keeps the screen on.
 
 To change Kinly's personality or tools later, edit `agent/prompt.ts` or `agent/tools.json`, push, and press the setup button again (it updates the agent instead of making a new one). You can also choose the voice and model in the ElevenLabs dashboard, or set `ELEVENLABS_VOICE_ID`, `ELEVENLABS_TTS_MODEL` and `KINLY_AGENT_LLM` in Vercel. Pick the newest Claude model the agent settings list, and check that your TTS model supports Kiswahili before switching a household to it.
+
+## Keeping voice costs down
+
+Live voice (ElevenLabs) is billed per minute. Families can set **Live voice minutes for chatting, per day** on the dashboard. Help and medicine reminders always use the live voice; once the day's chat minutes are used, chatting continues with the free practice voice. Activities never use the live voice. Today's usage is shown on the dashboard.
 
 ## How it works
 

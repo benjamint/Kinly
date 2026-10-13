@@ -6,6 +6,7 @@ import {
   overdueReminders,
   todaysReminders,
   unreadFamilyMessages,
+  voiceMinutesLeft,
 } from "../src/shared/household.js";
 import type { Household, HouseholdAction } from "../src/shared/types.js";
 import { findAgentId, setupAgent } from "./agent-setup.js";
@@ -282,6 +283,10 @@ const CLIENT_ACTIONS = new Set<HouseholdAction["type"]>([
   "updateElder",
   "saveFamilyMember",
   "deleteFamilyMember",
+  "logActivity",
+  "saveEvent",
+  "deleteEvent",
+  "logVoiceUsage",
 ]);
 
 export async function handleHousehold(env: ServerEnv, req: ApiRequest): Promise<ApiResponse> {
@@ -307,6 +312,13 @@ export async function handleHousehold(env: ServerEnv, req: ApiRequest): Promise<
 export async function handleSession(env: ServerEnv, req: ApiRequest): Promise<ApiResponse> {
   const auth = await authorizeHousehold(env, req);
   if ("error" in auth) return auth.error!;
+  // Help and medicine reminders always get the live voice; ordinary chat
+  // stops at the family's daily limit (the screen then uses the free voice).
+  const purpose = req.query.purpose === "help" || req.query.purpose === "reminder" ? req.query.purpose : "chat";
+  const left = voiceMinutesLeft(auth.row.household);
+  if (purpose === "chat" && left !== null && left <= 0) {
+    return json(429, { error: "Today's live voice minutes are used up.", code: "voice_cap" });
+  }
   const agentId = env.elevenLabsApiKey ? await resolveAgentId(env) : null;
   if (!env.elevenLabsApiKey || !agentId) {
     return json(503, { error: "Voice is not set up yet. Use \"Set up Kinly's voice\" on the family dashboard." });
@@ -317,7 +329,12 @@ export async function handleSession(env: ServerEnv, req: ApiRequest): Promise<Ap
   );
   if (!res.ok) return json(502, { error: `ElevenLabs refused the session (${res.status}).` });
   const { token } = (await res.json()) as { token: string };
-  return json(200, { token, dynamicVariables: agentContext(auth.row.household) });
+  return json(200, {
+    token,
+    dynamicVariables: agentContext(auth.row.household),
+    // Lets the screen end a chat gently when the daily minutes run out.
+    minutesLeft: purpose === "chat" ? left : null,
+  });
 }
 
 type ToolParams = Record<string, unknown> & { household_id?: string };

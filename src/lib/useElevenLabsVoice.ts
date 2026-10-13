@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 import { useConversation } from "@elevenlabs/react";
 import type { Household } from "../shared/types";
-import { fetchSession, type Connection } from "./household-context";
+import { ApiError, fetchSession, type Connection } from "./household-context";
 import type { StartOptions, VoiceEngine, VoiceState } from "./voice";
 
 /**
@@ -13,6 +13,10 @@ export function useElevenLabsVoice(
   connection: Connection | null,
   household: Household | null,
   onToolDone: () => void,
+  /** Seconds of live voice used, reported when each conversation ends. */
+  onUsage: (seconds: number) => void,
+  /** The daily chat limit is reached: carry on with the free voice instead. */
+  onCapReached: (options: StartOptions) => void,
 ): VoiceEngine {
   const [caption, setCaption] = useState("");
   const [heard, setHeard] = useState("");
@@ -22,11 +26,16 @@ export function useElevenLabsVoice(
   const [starting, setStarting] = useState(false);
   const onToolDoneRef = useRef(onToolDone);
   onToolDoneRef.current = onToolDone;
+  const onUsageRef = useRef(onUsage);
+  onUsageRef.current = onUsage;
+  const connectedAt = useRef<number | null>(null);
+  const capTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   // Told to the agent as soon as the session connects (e.g. "Help was pressed").
   const pendingContext = useRef<string | null>(null);
 
   const conversation = useConversation({
     onConnect: () => {
+      connectedAt.current = Date.now();
       const note = pendingContext.current;
       pendingContext.current = null;
       if (note) conversationRef.current?.sendContextualUpdate(note);
@@ -50,6 +59,11 @@ export function useElevenLabsVoice(
     onDisconnect: () => {
       setThinking(false);
       setActiveTool(null);
+      clearTimeout(capTimer.current);
+      if (connectedAt.current !== null) {
+        onUsageRef.current((Date.now() - connectedAt.current) / 1000);
+        connectedAt.current = null;
+      }
     },
   });
   const conversationRef = useRef(conversation);
@@ -70,7 +84,12 @@ export function useElevenLabsVoice(
         }
         // The browser must grant the microphone before the session starts.
         await navigator.mediaDevices.getUserMedia({ audio: true });
-        const { token, dynamicVariables } = await fetchSession(connection);
+        const { token, dynamicVariables, minutesLeft } = await fetchSession(connection, options.purpose ?? "chat");
+        // A chat that runs into the daily limit ends gently when the minutes run out.
+        clearTimeout(capTimer.current);
+        if (minutesLeft !== null && minutesLeft !== undefined) {
+          capTimer.current = setTimeout(() => conversationRef.current.endSession(), Math.max(30, minutesLeft * 60) * 1000);
+        }
         conversation.startSession({
           conversationToken: token,
           connectionType: "webrtc",
@@ -84,12 +103,16 @@ export function useElevenLabsVoice(
           },
         });
       } catch (e) {
+        if (e instanceof ApiError && e.code === "voice_cap") {
+          onCapReached(options);
+          return;
+        }
         setError((e as Error).message || "Could not start the conversation.");
       } finally {
         setStarting(false);
       }
     },
-    [connection, household, conversation],
+    [connection, household, conversation, onCapReached],
   );
 
   let state: VoiceState;

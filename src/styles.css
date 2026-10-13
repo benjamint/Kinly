@@ -335,11 +335,40 @@ textarea {
 
 /* ---------- Toolbar ---------- */
 
+/* Portrait: a 2×2 grid (Family, Reminders / Activities, Help). Buttons sit
+   side by side as icon + label so two rows stay compact. */
 .toolbar {
   grid-row: 4;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 12px;
+}
+
+.toolbar .tool {
+  min-height: 84px;
+  flex-direction: row;
+  gap: 12px;
+}
+
+/* In side-by-side buttons the count sits on the icon's corner, clear of the label. */
+.toolbar .tool__count {
+  top: 6px;
+  left: 6px;
+  right: auto;
+  min-width: 28px;
+  height: 28px;
+  font-size: 16px;
+}
+
+@media (orientation: landscape) and (min-width: 700px) and (min-height: 521px) {
+  .toolbar .tool__count {
+    top: 10px;
+    left: auto;
+    right: 12px;
+    min-width: 34px;
+    height: 34px;
+    font-size: 20px;
+  }
 }
 
 .tool {
@@ -459,6 +488,11 @@ textarea {
     grid-column: 2;
     grid-row: 2 / -1;
     grid-template-columns: 1fr;
+    grid-template-rows: repeat(4, minmax(0, 1fr));
+  }
+  .toolbar .tool {
+    min-height: 0;
+    flex-direction: column;
   }
   .tool__icon svg {
     width: 56px;
@@ -485,11 +519,11 @@ textarea {
     gap: 6px;
   }
   .toolbar {
-    grid-template-rows: repeat(3, minmax(0, 1fr));
+    grid-template-rows: repeat(4, minmax(0, 1fr));
     gap: 8px;
     min-height: 0;
   }
-  .tool {
+  .toolbar .tool {
     min-height: 0;
     flex-direction: row;
     gap: 10px;
@@ -1157,4 +1191,355 @@ textarea {
 
 .form--inline .btn {
   align-self: end;
+}
+
+.tool--activities .tool__icon svg {
+  color: #c27a12;
+}
+
+/* ---------- Activities ---------- */
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+  gap: 14px;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 150px;
+  padding: 16px;
+  border-radius: var(--radius);
+  border: 3px solid var(--line);
+  background: #fff;
+  cursor: pointer;
+}
+
+.tile:active {
+  transform: translateY(1px);
+}
+
+.tile__emoji {
+  font-size: 56px;
+  line-height: 1;
+}
+
+.tile__label {
+  font-size: 24px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.game {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 18px;
+  max-width: 760px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.game__prompt {
+  margin: 0;
+  font-size: clamp(24px, 5.5vw, 34px);
+  line-height: 1.35;
+  font-weight: 700;
+  text-align: center;
+}
+
+.game__lead {
+  color: var(--coral);
+}
+
+.game__note {
+  margin: -8px 0 0;
+  text-align: center;
+  color: var(--ink-soft);
+  font-size: 18px;
+}
+
+.choices {
+  display: grid;
+  gap: 12px;
+}
+
+.choices--numbers {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.choice-btn {
+  min-height: 80px;
+  padding: 14px 18px;
+  border-radius: var(--radius);
+  border: 3px solid var(--line);
+  background: #fff;
+  font-size: clamp(21px, 4.6vw, 28px);
+  font-weight: 700;
+  line-height: 1.3;
+  cursor: pointer;
+}
+
+.choice-btn__unit {
+  display: block;
+  font-size: 0.6em;
+  font-weight: 400;
+  color: var(--ink-soft);
+}
+
+.choice-btn--right {
+  border-color: var(--ok);
+  background: var(--ok-bg);
+}
+
+.choice-btn--tried {
+  border-color: #d8b9a6;
+  background: #f6eee8;
+  color: var(--ink-soft);
+}
+
+/* matching pairs */
+.pairs {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.pairs--8,
+.pairs--12 {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+@media (max-width: 520px) {
+  .pairs--8 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .pairs--12 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.card {
+  aspect-ratio: 1;
+  min-height: 84px;
+  border-radius: 18px;
+  border: 3px solid #e0a385;
+  background: linear-gradient(135deg, #c96a45, #b8613f);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: transform 0.25s ease, background 0.25s ease;
+}
+
+.card--shown {
+  background: #fff;
+  border-color: var(--line);
+  transform: rotateY(180deg);
+}
+
+.card--found {
+  background: var(--ok-bg);
+  border-color: var(--ok);
+}
+
+.card__face {
+  font-size: clamp(36px, 9vw, 60px);
+  transform: rotateY(180deg);
+}
+
+/* drum memory */
+.drums {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  max-width: 420px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.drum {
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 6px solid rgba(0, 0, 0, 0.18);
+  cursor: pointer;
+  opacity: 0.6;
+  transition: transform 0.1s ease, opacity 0.1s ease, box-shadow 0.1s ease;
+}
+
+.drum--0 { background: #c0392b; }
+.drum--1 { background: #e2a82b; }
+.drum--2 { background: #3f8f4f; }
+.drum--3 { background: #2f6db5; }
+
+.drum--lit {
+  opacity: 1;
+  transform: scale(1.06);
+  box-shadow: 0 0 0 8px rgba(255, 255, 255, 0.85), 0 0 28px rgba(0, 0, 0, 0.25);
+}
+
+/* Today board */
+.today {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 760px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.today__hero {
+  text-align: center;
+  padding: 20px 16px;
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, #b8613f, #a9573a);
+  color: #fff;
+}
+
+.today__hero p {
+  margin: 0;
+}
+
+.today__day {
+  font-size: clamp(40px, 11vw, 72px);
+  font-weight: 700;
+  line-height: 1.05;
+}
+
+.today__date {
+  font-size: clamp(22px, 5vw, 32px);
+}
+
+.today__hero .today__part {
+  margin-top: 8px;
+  font-size: 22px;
+}
+
+.today__hero .today__weather {
+  margin-top: 10px;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.today__card {
+  background: #fff;
+  border: 2px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+}
+
+.today__card h2 {
+  margin: 0 0 8px;
+  font-size: 24px;
+}
+
+.today__card ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.today__card p {
+  margin: 0;
+}
+
+.today__time {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.today .is-done {
+  color: var(--ink-soft);
+}
+
+.today__tick {
+  color: var(--ok);
+  font-weight: 700;
+}
+
+/* chair exercises */
+.exercise {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+  max-width: 640px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.exercise__step {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 18px;
+}
+
+.exercise__ring {
+  --p: 0;
+  width: min(56vw, 240px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  background: radial-gradient(closest-side, var(--cream) 82%, transparent 83%),
+    conic-gradient(var(--coral) calc(var(--p) * 360deg), #ead7c6 0);
+}
+
+.exercise__emoji {
+  font-size: clamp(56px, 16vw, 92px);
+  line-height: 1;
+  margin: 0;
+}
+
+.exercise__count {
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.exercise__title {
+  margin: 0;
+  font-size: clamp(28px, 6vw, 38px);
+}
+
+.exercise__how {
+  margin: 0;
+  font-size: clamp(21px, 4.6vw, 26px);
+  line-height: 1.4;
+}
+
+.exercise__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  width: 100%;
+}
+
+.exercise__actions .big-button {
+  flex: 1 1 200px;
+}
+
+.exercise__safety {
+  margin: 0;
+  color: var(--help-dark);
+  font-weight: 700;
+  font-size: 18px;
+}
+
+.row-input {
+  display: flex;
+  gap: 8px;
+}
+
+.row-input input {
+  flex: 1;
+  min-width: 0;
 }
