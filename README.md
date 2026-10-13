@@ -91,3 +91,5 @@ tests/            vitest: state logic, demo brain, scheduler, API + tools
 - Missed-reminder detection runs on the tablet, so it only works while the tablet is on. It should move to a server cron.
 - The family dashboard refreshes every 5 seconds instead of using push notifications, SMS or WhatsApp.
 - Health data needs proper consent, residency and retention rules (PRD PR-1) before any real pilot.
+
+> **Quick Supabase setup without the CLI:** paste `supabase/setup.sql` into the Supabase SQL Editor, change the household code and PIN on the two marked lines, and run it. It creates the table and a first household with the demo reminders.
