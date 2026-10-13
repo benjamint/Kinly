@@ -45,6 +45,20 @@ export function greeting(household: Household): string {
     : `Hello ${name}, it's Kinly. How are you feeling today?`;
 }
 
+/** First conversation of the day: Kinly says plainly that it is an AI assistant. */
+export function introduction(household: Household, now: Date = new Date()): string {
+  const hour = Number(
+    new Intl.DateTimeFormat("en-GB", { timeZone: household.elder.timezone, hour: "2-digit", hourCycle: "h23" }).format(now),
+  );
+  const name = household.elder.name;
+  if (household.elder.language === "sw") {
+    const salaam = hour < 12 ? "Habari za asubuhi" : hour < 17 ? "Habari za mchana" : "Habari za jioni";
+    return `${salaam}, ${name}. Mimi ni Kinly, msaidizi wako wa AI. Unajisikiaje leo?`;
+  }
+  const greet = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  return `${greet}, ${name}. I'm Kinly, your AI assistant. How are you feeling today?`;
+}
+
 export function reminderPrompt(household: Household, reminderId: string): string {
   const r = household.reminders.find((x) => x.id === reminderId);
   if (!r) return greeting(household);

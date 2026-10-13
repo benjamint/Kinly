@@ -60,35 +60,73 @@ textarea {
 
 /* ---------- Elder screen ---------- */
 
+/* The portrait fills the screen; the clock, captions and tools sit on top of
+   it over soft dark gradients, like a video call. */
 .elder {
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  position: relative;
   height: 100dvh;
-  padding: max(12px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
-  gap: 8px;
-  background: radial-gradient(120% 80% at 50% 35%, var(--cream) 0%, var(--cream-2) 100%);
-  transition: background 1.2s ease;
   overflow: hidden;
+  background: #2b1d14;
+  color: #fff;
   user-select: none;
+  display: grid;
+  grid-template-rows: auto 1fr auto auto;
+  padding: max(14px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+  gap: 10px;
 }
 
-.elder--sleeping {
-  --feature: #c9c3e6;
-  --cheek: #6e5f99;
-  --ink: #ece8ff;
-  --ink-soft: #bdb6dd;
-  background: radial-gradient(120% 80% at 50% 35%, #2a2f55 0%, #171a33 100%);
-  color: var(--ink);
+.elder::before,
+.elder::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  z-index: 1;
 }
 
-.elder--concerned {
-  background: radial-gradient(120% 80% at 50% 35%, #fff1ec 0%, #fbd9cf 100%);
+.elder::before {
+  top: 0;
+  height: 160px;
+  background: linear-gradient(rgba(20, 12, 8, 0.6), rgba(20, 12, 8, 0));
+}
+
+.elder::after {
+  bottom: 0;
+  height: min(52%, 420px);
+  background: linear-gradient(rgba(20, 12, 8, 0), rgba(20, 12, 8, 0.55) 35%, rgba(20, 12, 8, 0.88));
+}
+
+.elder > :not(.elder__face) {
+  position: relative;
+  z-index: 2;
+}
+
+.elder__face {
+  all: unset;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  cursor: pointer;
+}
+
+.elder__face:focus-visible {
+  outline: 4px solid #8ab4f8;
+  outline-offset: -6px;
+}
+
+.portrait {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .elder__top {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+  gap: 12px;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.45);
 }
 
 .clock {
@@ -98,43 +136,103 @@ textarea {
 }
 
 .clock__time {
-  font-size: clamp(32px, 7vw, 56px);
+  font-size: clamp(32px, 7vw, 54px);
   font-weight: 700;
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 
 .clock__day {
-  font-size: clamp(18px, 3.4vw, 26px);
-  color: var(--ink-soft);
+  font-size: clamp(17px, 3.4vw, 24px);
+  opacity: 0.92;
+}
+
+.elder__badges {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
 }
 
 .elder__badge {
   font-size: 14px;
   padding: 6px 12px;
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.06);
-  color: var(--ink-soft);
+  background: rgba(20, 12, 8, 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #fff;
+  white-space: nowrap;
+  text-shadow: none;
 }
 
-.elder__face {
-  all: unset;
-  display: grid;
-  place-items: center;
-  min-height: 0;
-  cursor: pointer;
-  border-radius: 40px;
-  position: relative;
+.elder__badge--ai {
+  font-weight: 700;
 }
 
-.elder__face:focus-visible {
-  outline: 4px solid #1a5fb4;
+/* Small pill that says what Kinly is doing, so it's never ambiguous. */
+.status {
+  grid-row: 2;
+  align-self: end;
+  justify-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: rgba(20, 12, 8, 0.6);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.status__dots {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.status__dots i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #7ee2a8;
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+.status--thinking .status__dots i {
+  background: #f6c177;
+}
+
+.status--speaking .status__dots i {
+  background: #8ab4f8;
+}
+
+.status__dots i:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.status__dots i:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
 }
 
 .elder__caption-area {
-  min-height: calc(var(--caption-size) * 2.8);
+  grid-row: 3;
+  min-height: calc(var(--caption-size) * 2.6);
   display: grid;
-  place-items: center;
+  place-items: end center;
   text-align: center;
 }
 
@@ -143,6 +241,7 @@ textarea {
   max-width: 34ch;
   line-height: 1.3;
   font-weight: 700;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
   display: -webkit-box;
   -webkit-line-clamp: 4;
   -webkit-box-orient: vertical;
@@ -151,170 +250,16 @@ textarea {
 
 .hint {
   margin: 0;
-  font-size: clamp(20px, 4vw, 28px);
-  color: var(--ink-soft);
+  font-size: clamp(19px, 4vw, 26px);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
 }
 
-/* ---------- Face ---------- */
-
-.face {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-}
-
-.face__breath {
-  transform-origin: 200px 240px;
-  animation: breathe 5s ease-in-out infinite;
-}
-
-.face--speaking .face__breath,
-.face--listening .face__breath {
-  animation-duration: 3s;
-}
-
-@keyframes breathe {
-  0%,
-  100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.025) translateY(-3px);
-  }
-}
-
-.face__cheek {
-  fill: var(--cheek);
-  opacity: 0.45;
-  transition: fill 1s;
-}
-
-.face__iris {
-  fill: var(--feature);
-  transition: fill 1s;
-}
-
-.face__shine {
-  fill: #fff;
-  opacity: 0.95;
-}
-
-.face__shine--small {
-  opacity: 0.7;
-}
-
-.face__eyes {
-  transition: transform 0.6s cubic-bezier(0.3, 0.7, 0.3, 1);
-}
-
-.face__eye {
-  transform-box: fill-box;
-  transform-origin: center;
-  transition: transform 0.35s ease;
-}
-
-.face__eyes--blink .face__eye {
-  transform: scaleY(0.08) !important;
-  transition-duration: 0.07s;
-}
-
-.face__brows {
-  transition: opacity 0.4s;
-}
-
-.face__brow,
-.face__lid {
-  fill: none;
-  stroke: var(--feature);
-  stroke-width: 10;
-  stroke-linecap: round;
-}
-
-.face__mouth {
-  fill: var(--feature);
-  stroke: var(--feature);
-  stroke-width: 10;
-  stroke-linejoin: round;
-}
-
-.face__dots circle {
-  fill: var(--feature);
-  animation: dot 1.2s ease-in-out infinite;
-}
-
-.face__dots circle:nth-child(2) {
-  animation-delay: 0.2s;
-}
-
-.face__dots circle:nth-child(3) {
-  animation-delay: 0.4s;
-}
-
-@keyframes dot {
-  0%,
-  100% {
-    opacity: 0.2;
-    transform: translateY(0);
-  }
-  50% {
-    opacity: 1;
-    transform: translateY(-8px);
-  }
-}
-
-.face__zzz text {
-  fill: var(--feature);
-  font-size: 34px;
-  font-weight: 700;
-  animation: zzz 3s ease-in-out infinite;
-}
-
-.face__zzz text:nth-child(2) {
-  font-size: 26px;
-  animation-delay: 1s;
-}
-
-@keyframes zzz {
-  0%,
-  100% {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  50% {
-    opacity: 0.9;
-    transform: translateY(-6px);
-  }
-}
-
-/* A soft halo while Kinly listens, so it's obvious it's your turn. */
-.elder--listening .elder__face::before {
-  content: "";
-  position: absolute;
-  inset: 4%;
-  border-radius: 50%;
-  border: 6px solid var(--coral-soft);
-  animation: halo 1.8s ease-out infinite;
-  pointer-events: none;
-}
-
-@keyframes halo {
-  from {
-    transform: scale(0.85);
-    opacity: 0.9;
-  }
-  to {
-    transform: scale(1.05);
-    opacity: 0;
-  }
+.elder--concerned::after {
+  background: linear-gradient(rgba(60, 8, 8, 0), rgba(60, 8, 8, 0.55) 35%, rgba(60, 8, 8, 0.9));
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .face__breath,
-  .face__dots circle,
-  .face__zzz text,
-  .elder--listening .elder__face::before {
+  .status__dots i {
     animation: none;
   }
 }
@@ -322,6 +267,7 @@ textarea {
 /* ---------- Toolbar ---------- */
 
 .toolbar {
+  grid-row: 4;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 12px;
@@ -334,20 +280,15 @@ textarea {
   align-items: center;
   justify-content: center;
   gap: 4px;
-  min-height: 104px;
-  border: none;
+  min-height: 100px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: var(--radius);
-  background: #fff;
-  color: var(--ink);
-  box-shadow: 0 2px 0 rgba(46, 31, 38, 0.12), 0 8px 24px rgba(46, 31, 38, 0.08);
+  background: rgba(255, 250, 245, 0.94);
+  color: #2e1f26;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
   cursor: pointer;
   overflow: hidden;
   touch-action: none;
-}
-
-.elder--sleeping .tool {
-  background: #262b4d;
-  color: var(--ink);
 }
 
 .tool:active {
@@ -355,8 +296,8 @@ textarea {
 }
 
 .tool__icon svg {
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   fill: currentColor;
 }
 
@@ -366,7 +307,7 @@ textarea {
 }
 
 .tool__label {
-  font-size: clamp(18px, 4.2vw, 26px);
+  font-size: clamp(18px, 4.2vw, 24px);
   font-weight: 700;
   position: relative;
 }
@@ -375,8 +316,8 @@ textarea {
   position: absolute;
   top: 10px;
   right: 12px;
-  min-width: 34px;
-  height: 34px;
+  min-width: 32px;
+  height: 32px;
   padding: 0 8px;
   border-radius: 999px;
   display: grid;
@@ -384,16 +325,13 @@ textarea {
   background: var(--coral);
   color: #fff;
   font-weight: 700;
-  font-size: 20px;
+  font-size: 19px;
 }
 
 .tool--help {
   background: var(--help);
   color: #fff;
-}
-
-.elder--sleeping .tool--help {
-  background: var(--help);
+  border-color: transparent;
 }
 
 .tool__fill {
@@ -416,22 +354,41 @@ textarea {
 
 @media (orientation: landscape) and (min-width: 700px) {
   .elder {
-    grid-template-columns: minmax(0, 1fr) clamp(200px, 22vw, 280px);
-    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) clamp(200px, 22vw, 260px);
+    grid-template-rows: auto 1fr auto;
   }
-  .elder__top,
-  .elder__face,
+  .elder::after {
+    left: auto;
+    top: 0;
+    width: min(40%, 420px);
+    height: auto;
+    background: linear-gradient(90deg, rgba(20, 12, 8, 0), rgba(20, 12, 8, 0.75));
+  }
+  .elder::before {
+    height: 140px;
+  }
+  .elder__top {
+    grid-column: 1 / -1;
+  }
+  .status {
+    grid-column: 1;
+    grid-row: 2;
+  }
   .elder__caption-area {
     grid-column: 1;
+    grid-row: 3;
+    background: linear-gradient(rgba(20, 12, 8, 0), rgba(20, 12, 8, 0.6));
+    border-radius: 18px;
+    padding: 12px 16px 4px;
   }
   .toolbar {
     grid-column: 2;
-    grid-row: 1 / -1;
+    grid-row: 2 / -1;
     grid-template-columns: 1fr;
   }
   .tool__icon svg {
-    width: 64px;
-    height: 64px;
+    width: 56px;
+    height: 56px;
   }
 }
 

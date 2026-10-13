@@ -2,11 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHousehold } from "../lib/household-context";
 import { useDemoVoice } from "../lib/useDemoVoice";
 import { useElevenLabsVoice } from "../lib/useElevenLabsVoice";
-import { reminderPrompt, whoPrompt } from "../lib/demo-brain";
+import { introduction, reminderPrompt, whoPrompt } from "../lib/demo-brain";
 import type { VoiceEngine } from "../lib/voice";
-import { isQuietTime, todaysReminders, unreadFamilyMessages } from "../shared/household";
+import { isQuietTime, localClock, todaysReminders, unreadFamilyMessages } from "../shared/household";
 import type { Household } from "../shared/types";
-import { Face, type Expression } from "./Face";
+import type { Expression } from "./expression";
+import { Portrait } from "./Portrait";
 import { HelpButton, HelpOverlay } from "./Help";
 import { FamilySheet, RemindersSheet, SettingsSheet } from "./Sheets";
 import { sayOnce, stayAwake } from "./sound";
@@ -14,6 +15,25 @@ import { useReminderScheduler } from "./useReminderScheduler";
 import { useLongPress } from "./useLongPress";
 
 type Sheet = "family" | "reminders" | "settings" | null;
+
+const INTRO_KEY = "kinly.introducedOn";
+
+/** Kinly says it is an AI assistant in the first conversation of each day. */
+function needsIntroduction(date: string): boolean {
+  try {
+    if (localStorage.getItem(INTRO_KEY) === date) return false;
+    localStorage.setItem(INTRO_KEY, date);
+  } catch {
+    /* storage unavailable: introduce every time, which is the safe side */
+  }
+  return true;
+}
+
+const STATUS: Partial<Record<Expression, string>> = {
+  listening: "Listening",
+  thinking: "Thinking",
+  speaking: "Speaking",
+};
 
 function useNow(intervalMs = 15_000) {
   const [now, setNow] = useState(() => new Date());
@@ -97,8 +117,9 @@ export function ElderScreen() {
 
   const onFaceTap = () => {
     void stayAwake();
-    if (busy) voice.stop();
-    else voice.start();
+    if (busy) return voice.stop();
+    const { date } = localClock(new Date(), household.elder.timezone);
+    voice.start(needsIntroduction(date) ? { firstMessage: introduction(household, new Date()) } : undefined);
   };
 
   const hint =
@@ -107,21 +128,35 @@ export function ElderScreen() {
       : voice.state === "listening"
         ? "I'm listening…"
         : busy
-          ? "Tap my face to stop"
+          ? "Tap the screen to stop"
           : expression === "sleeping"
-            ? "Resting. Tap my face if you need me."
-            : "Tap my face to talk to me";
+            ? "Resting. Tap the screen if you need me."
+            : "Tap the screen to talk to me";
 
   return (
     <main className={`elder elder--${expression}`}>
+      <button className="elder__face" onClick={onFaceTap} aria-label={hint}>
+        <Portrait expression={expression} getVolume={voice.getVolume} />
+      </button>
+
       <header className="elder__top">
         <Clock household={household} now={now} onLongPress={() => setSheet("settings")} />
-        {!live && <span className="elder__badge">Practice voice</span>}
+        <div className="elder__badges">
+          <span className="elder__badge elder__badge--ai">Kinly · AI assistant</span>
+          {!live && <span className="elder__badge">Practice voice</span>}
+        </div>
       </header>
 
-      <button className="elder__face" onClick={onFaceTap} aria-label={hint}>
-        <Face expression={expression} getVolume={voice.getVolume} />
-      </button>
+      {STATUS[expression] && (
+        <div className={`status status--${expression}`} aria-hidden="true">
+          <span className="status__dots">
+            <i />
+            <i />
+            <i />
+          </span>
+          {STATUS[expression]}
+        </div>
+      )}
 
       <div className="elder__caption-area" aria-live="polite">
         {household.elder.showCaptions && showCaption && voice.caption ? (
