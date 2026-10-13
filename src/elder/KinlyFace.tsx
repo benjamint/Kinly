@@ -40,6 +40,9 @@ const GESTURES: { pose: Partial<Pose>; ms: number }[] = [
 type Key = keyof Pose;
 const KEYS = Object.keys(POSES.idle) as Key[];
 
+/** Physics step (seconds). */
+const STEP = 1 / 240;
+
 // Eye geometry (local units, eye centred on 0,0).
 const EYE_HALF = 66;
 
@@ -154,18 +157,23 @@ export function KinlyFace({ expression, getVolume }: FaceProps) {
         target.lower += Math.sin(t * 2.1) * 0.05;
       }
 
-      // Springs: a touch of overshoot gives the bouncy feel.
-      for (const k of KEYS) {
-        const stiffness = k === "lookX" || k === "lookY" ? 120 : 160;
-        const damping = k === "lookX" || k === "lookY" ? 14 : 15;
-        vel[k] += ((target[k] - cur[k]) * stiffness - vel[k] * damping) * dt;
-        cur[k] += vel[k] * dt;
-      }
 
       // Lips follow the voice, with varying width so syllables look different.
       const vol = Math.max(cur.part, expression === "speaking" ? Math.min(1, getVolume() * 1.7) : 0);
-      mouthVel += ((vol - mouth) * 900 - mouthVel * 45) * dt;
-      mouth = Math.max(0, mouth + mouthVel * dt);
+
+      // Springs, stepped in small fixed increments so they stay stable even
+      // when a slow device delivers frames far apart. A touch of overshoot
+      // gives the bouncy feel.
+      for (let left = dt; left > 0; left -= STEP) {
+        const h = Math.min(STEP, left);
+        for (const k of KEYS) {
+          const look = k === "lookX" || k === "lookY";
+          vel[k] += ((target[k] - cur[k]) * (look ? 120 : 160) - vel[k] * (look ? 14 : 15)) * h;
+          cur[k] += vel[k] * h;
+        }
+        mouthVel += ((vol - mouth) * 900 - mouthVel * 45) * h;
+        mouth = Math.max(0, Math.min(1.3, mouth + mouthVel * h));
+      }
       const syllable = expression === "speaking" ? Math.sin(t * 7.3) * 0.07 + Math.sin(t * 3.1) * 0.05 : 0;
       const lips: Pose = { ...cur, width: cur.width * (1 - mouth * 0.22) + syllable };
 

@@ -113,7 +113,9 @@ textarea {
   --kf-mouth: #2a120c;
 }
 
-.elder > :not(.elder__face) {
+/* The clock, status, captions and tools sit above the face. (Sheets and the
+   Help screen are fixed full-screen layers and must not be caught here.) */
+.elder > :is(.elder__top, .status, .elder__caption-area, .toolbar) {
   position: relative;
   z-index: 2;
 }
@@ -464,6 +466,66 @@ textarea {
   }
 }
 
+/* Narrow phones: keep tool labels inside their buttons. */
+@media (max-width: 360px) {
+  .toolbar {
+    gap: 8px;
+  }
+  .tool__label {
+    font-size: 16px;
+  }
+}
+
+/* Short screens (a phone held sideways): the three tools share the height
+   instead of overflowing, and the clock and captions shrink a little. */
+@media (orientation: landscape) and (max-height: 520px) {
+  .elder {
+    padding-top: max(8px, env(safe-area-inset-top));
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+    gap: 6px;
+  }
+  .toolbar {
+    grid-template-rows: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    min-height: 0;
+  }
+  .tool {
+    min-height: 0;
+    flex-direction: row;
+    gap: 10px;
+  }
+  .tool__icon svg {
+    width: 34px;
+    height: 34px;
+  }
+  .tool__label {
+    font-size: 20px;
+  }
+  .clock__time {
+    font-size: 30px;
+  }
+  .clock__day {
+    font-size: 16px;
+  }
+  .status {
+    padding: 6px 14px;
+    font-size: 17px;
+  }
+  .elder__caption-area {
+    min-height: 0;
+  }
+  .caption {
+    -webkit-line-clamp: 2;
+  }
+  .sheet__head {
+    padding-top: max(8px, env(safe-area-inset-top));
+    padding-bottom: 8px;
+  }
+  .sheet__close {
+    min-height: 52px;
+  }
+}
+
 /* ---------- Sheets & overlays (elder side) ---------- */
 
 .sheet,
@@ -513,12 +575,20 @@ textarea {
 
 .sheet__body {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   padding: 16px 16px max(24px, env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
   gap: 16px;
   font-size: 22px;
+}
+
+/* Let long lists overflow (and scroll) instead of squashing. */
+.sheet__body > * {
+  flex-shrink: 0;
 }
 
 .empty {
@@ -719,8 +789,11 @@ textarea {
 }
 
 .overlay--help {
-  justify-content: center;
+  /* "safe" keeps the top reachable when the screen is too short to centre. */
+  justify-content: safe center;
   align-items: center;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   text-align: center;
   padding: 24px;
   gap: 12px;
