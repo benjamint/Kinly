@@ -1,5 +1,5 @@
-import { SYSTEM_PROMPT } from "../agent/prompt";
-import TOOLS from "../agent/tools.json";
+import { SYSTEM_PROMPT } from "../agent/prompt.js";
+import { TOOLS } from "../agent/tools.js";
 
 // Creates or updates the Kinly agent and its webhook tools in ElevenLabs.
 // Runs inside the deployed app (the "Set up Kinly's voice" button on the
@@ -81,7 +81,7 @@ export async function setupAgent(o: AgentSetupOptions): Promise<{ agentId: strin
 
   const existing = await call<{ tools?: { id: string; tool_config: { name: string } }[] }>("GET", "/tools");
   const toolIds: string[] = [];
-  for (const t of TOOLS as ToolDef[]) {
+  for (const t of TOOLS as readonly ToolDef[]) {
     const config = { tool_config: toolConfig(t, publicUrl, o.toolSecret) };
     const found = existing.tools?.find((x) => x.tool_config.name === t.name);
     if (found) {

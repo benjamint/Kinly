@@ -7,7 +7,7 @@
 // Needs in .env: ELEVENLABS_API_KEY, KINLY_PUBLIC_URL (your deployed site),
 // KINLY_TOOL_SECRET. Optional: ELEVENLABS_VOICE_ID, ELEVENLABS_TTS_MODEL, KINLY_AGENT_LLM.
 import { loadEnv } from "vite";
-import { setupAgent } from "../server/agent-setup";
+import { setupAgent } from "../server/agent-setup.js";
 
 const env = { ...loadEnv("development", process.cwd(), ""), ...process.env };
 for (const name of ["ELEVENLABS_API_KEY", "KINLY_PUBLIC_URL", "KINLY_TOOL_SECRET"]) {

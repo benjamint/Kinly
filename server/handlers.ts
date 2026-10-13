@@ -1,8 +1,8 @@
 import { timingSafeEqual } from "node:crypto";
-import { agentContext, localClock, todaysReminders, unreadFamilyMessages } from "../src/shared/household";
-import type { HouseholdAction } from "../src/shared/types";
-import { findAgentId, setupAgent } from "./agent-setup";
-import { mutate, sha256, SupabaseStore, type HouseholdStore } from "./store";
+import { agentContext, localClock, todaysReminders, unreadFamilyMessages } from "../src/shared/household.js";
+import type { HouseholdAction } from "../src/shared/types.js";
+import { findAgentId, setupAgent } from "./agent-setup.js";
+import { mutate, sha256, SupabaseStore, type HouseholdStore } from "./store.js";
 
 // Framework-agnostic request handlers. `api/*.ts` adapts them for Vercel and
 // vite.config.ts mounts them on the dev server, so both run the same code.

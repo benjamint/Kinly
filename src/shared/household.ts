@@ -1,4 +1,4 @@
-import type { Household, HouseholdAction, Reminder, ReminderLog } from "./types";
+import type { Household, HouseholdAction, Reminder, ReminderLog } from "./types.js";
 
 /** How long after its time a reminder counts as "due" before it is logged as missed. */
 export const MISSED_AFTER_MINUTES = 30;

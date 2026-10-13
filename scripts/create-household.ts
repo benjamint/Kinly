@@ -3,8 +3,8 @@
 //   npm run create-household -- <code> <pin> [elder name] [time zone]
 //   npm run create-household -- mama-ama 482913 Ama Africa/Accra
 import { loadEnv } from "vite";
-import { demoHousehold } from "../src/shared/household";
-import { sha256, SupabaseStore } from "../server/store";
+import { demoHousehold } from "../src/shared/household.js";
+import { sha256, SupabaseStore } from "../server/store.js";
 
 const env = { ...loadEnv("development", process.cwd(), ""), ...process.env };
 const [id, pin, name = "Ama", timezone = "Africa/Accra"] = process.argv.slice(2);

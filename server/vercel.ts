@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { envFromProcess, type ApiRequest, type ApiResponse, type ServerEnv } from "./handlers";
+import { envFromProcess, type ApiRequest, type ApiResponse, type ServerEnv } from "./handlers.js";
 
 type Handler = (env: ServerEnv, req: ApiRequest) => Promise<ApiResponse>;
 

@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { applyAction } from "../src/shared/household";
-import type { Household, HouseholdAction } from "../src/shared/types";
+import { applyAction } from "../src/shared/household.js";
+import type { Household, HouseholdAction } from "../src/shared/types.js";
 
 export interface HouseholdRow {
   household: Household;
