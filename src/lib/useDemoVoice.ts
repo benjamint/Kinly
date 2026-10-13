@@ -154,7 +154,11 @@ export function useDemoVoice(
       setError(null);
       setHeard("");
       silences.current = 0;
-      context.current = { reminderId: options.reminderId, askingWho: options.askingWho };
+      context.current = {
+        reminderId: options.reminderId,
+        askingWho: options.askingWho,
+        composingTo: options.replyTo,
+      };
       const opening =
         options.firstMessage ?? (options.reminderId ? reminderPrompt(h, options.reminderId) : greeting(h));
       setState("connecting");

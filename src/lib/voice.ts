@@ -10,6 +10,10 @@ export interface StartOptions {
   reminderId?: string;
   /** Kinly opened by asking who to send a message to. */
   askingWho?: boolean;
+  /** Kinly just read a message from this family member, so a reply goes to them. */
+  replyTo?: string;
+  /** Background for the live agent about why this conversation started. */
+  context?: string;
 }
 
 export interface VoiceEngine {

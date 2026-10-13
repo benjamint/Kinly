@@ -10,13 +10,26 @@ import type { Expression } from "./expression";
 import { KinlyFace } from "./KinlyFace";
 import { HelpButton, HelpOverlay } from "./Help";
 import { FamilySheet, RemindersSheet, SettingsSheet } from "./Sheets";
-import { sayOnce, stayAwake } from "./sound";
+import { stayAwake } from "./sound";
 import { useReminderScheduler } from "./useReminderScheduler";
 import { useLongPress } from "./useLongPress";
 
 type Sheet = "family" | "reminders" | "settings" | null;
 
 const INTRO_KEY = "kinly.introducedOn";
+
+function helpLine(household: Household, familyNames: string): string {
+  return household.elder.language === "sw"
+    ? `Nimewaambia ${familyNames} kwamba unahitaji msaada. Kaa hapo ulipo, niko hapa nawe. Unajisikiaje?`
+    : `I've told ${familyNames} that you need help. Stay where you are, I'm here with you. Can you tell me what happened?`;
+}
+
+function readAloudLine(household: Household, familyName: string, text: string): string {
+  const said = /[.!?]$/.test(text.trim()) ? text.trim() : `${text.trim()}.`;
+  return household.elder.language === "sw"
+    ? `${familyName} anasema: ${said} Ungependa kujibu?`
+    : `${familyName} says: ${said} Would you like to reply?`;
+}
 
 /** Kinly says it is an AI assistant in the first conversation of each day. */
 function needsIntroduction(date: string): boolean {
@@ -112,7 +125,6 @@ export function ElderScreen() {
 
   const unread = unreadFamilyMessages(household).length;
   const due = todaysReminders(household, now).filter((t) => t.status === "due").length;
-  const lang = household.elder.language === "sw" ? "sw-KE" : "en-GB";
   const familyNames = household.family.map((f) => f.name).join(" and ") || "your family";
 
   const onFaceTap = () => {
@@ -185,15 +197,17 @@ export function ElderScreen() {
         </button>
         <HelpButton
           onHelp={() => {
-            voice.stop();
             setSheet(null);
             setHelpOpen(true);
             void dispatch({ type: "raiseAlert", source: "button", reason: "Pressed the Help button." });
-            sayOnce(
-              `I've told ${familyNames} that you need help. Stay where you are. Someone will be in touch very soon.`,
-              lang,
-              household.elder.speechSpeed,
-            );
+            // Kinly's own voice tells them help is coming, then stays and talks with them.
+            voice.start({
+              firstMessage: helpLine(household, familyNames),
+              context:
+                `${household.elder.name} just pressed the Help button. ${familyNames} have ALREADY been alerted, ` +
+                "so do not call raise_alert again unless something new and serious happens. Stay with them: keep them " +
+                "calm, ask simply how they are and what happened, and if it sounds serious tell them to call emergency services.",
+            });
           }}
         />
       </nav>
@@ -205,6 +219,14 @@ export function ElderScreen() {
           onSendMessage={() => {
             setSheet(null);
             voice.start({ askingWho: true, firstMessage: whoPrompt(household) });
+          }}
+          onReadAloud={(familyName, text) => {
+            setSheet(null);
+            voice.start({
+              replyTo: familyName,
+              firstMessage: readAloudLine(household, familyName, text),
+              context: `You just read ${household.elder.name} this message from ${familyName}: "${text}". If they want to reply, help them send it to ${familyName}.`,
+            });
           }}
         />
       )}

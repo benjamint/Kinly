@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { useHousehold } from "../lib/household-context";
 import { localClock, todaysReminders, unreadFamilyMessages } from "../shared/household";
 import type { Household, Language } from "../shared/types";
-import { sayOnce } from "./sound";
 
 function Sheet({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
@@ -33,13 +32,15 @@ export function FamilySheet({
   household,
   onClose,
   onSendMessage,
+  onReadAloud,
 }: {
   household: Household;
   onClose: () => void;
   onSendMessage: () => void;
+  /** Kinly reads the message in its own voice and offers to send a reply. */
+  onReadAloud: (familyName: string, text: string) => void;
 }) {
   const { dispatch } = useHousehold();
-  const lang = household.elder.language === "sw" ? "sw-KE" : "en-GB";
   const recent = household.messages.slice(-12).reverse();
 
   // Opening the sheet counts as seeing the new messages.
@@ -64,7 +65,7 @@ export function FamilySheet({
             {m.direction === "family" && (
               <button
                 className="small-button"
-                onClick={() => sayOnce(`${m.familyName} says: ${m.text}`, lang, household.elder.speechSpeed)}
+                onClick={() => onReadAloud(m.familyName, m.text)}
               >
                 Read it to me
               </button>

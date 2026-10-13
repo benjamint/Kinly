@@ -22,8 +22,15 @@ export function useElevenLabsVoice(
   const [starting, setStarting] = useState(false);
   const onToolDoneRef = useRef(onToolDone);
   onToolDoneRef.current = onToolDone;
+  // Told to the agent as soon as the session connects (e.g. "Help was pressed").
+  const pendingContext = useRef<string | null>(null);
 
   const conversation = useConversation({
+    onConnect: () => {
+      const note = pendingContext.current;
+      pendingContext.current = null;
+      if (note) conversationRef.current?.sendContextualUpdate(note);
+    },
     onMessage: (m) => {
       if (m.role === "agent") {
         setCaption(m.message);
@@ -45,13 +52,22 @@ export function useElevenLabsVoice(
       setActiveTool(null);
     },
   });
+  const conversationRef = useRef(conversation);
+  conversationRef.current = conversation;
 
   const start = useCallback(
     async (options: StartOptions = {}) => {
       if (!connection || !household) return;
       setError(null);
       setStarting(true);
+      pendingContext.current = options.context ?? null;
       try {
+        // Starting something new (Help, a reminder) while a conversation is on:
+        // end it first so the new one opens with the right first words.
+        if (conversation.status === "connected" || conversation.status === "connecting") {
+          conversation.endSession();
+          await new Promise((r) => setTimeout(r, 400));
+        }
         // The browser must grant the microphone before the session starts.
         await navigator.mediaDevices.getUserMedia({ audio: true });
         const { token, dynamicVariables } = await fetchSession(connection);

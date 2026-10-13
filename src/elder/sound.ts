@@ -23,16 +23,6 @@ export function chime() {
   }
 }
 
-/** One-off spoken line outside a conversation (e.g. after the Help button). */
-export function sayOnce(text: string, lang: string, rate: number) {
-  if (typeof speechSynthesis === "undefined") return;
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = lang;
-  u.rate = rate;
-  speechSynthesis.cancel();
-  speechSynthesis.speak(u);
-}
-
 let wakeLock: { released: boolean } | null = null;
 
 /** Keep the screen on and go full screen, so the face is always there. */
