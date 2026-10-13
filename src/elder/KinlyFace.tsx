@@ -16,15 +16,16 @@ interface Pose {
   lookY: number; // -1 … 1
   smile: number; // -1 frown … 1 smile
   width: number; // mouth width multiplier
+  part: number; // lips parted at rest: 0 closed … ~0.3 a hint of teeth
 }
 
 const POSES: Record<Expression, Pose> = {
-  idle: { open: 0.62, lower: 0.25, pupil: 27, sad: 0, lookX: 0, lookY: 0.05, smile: 0.45, width: 1 },
-  listening: { open: 0.95, lower: 0.08, pupil: 29, sad: 0, lookX: 0, lookY: -0.05, smile: 0.3, width: 0.96 },
-  thinking: { open: 0.5, lower: 0.55, pupil: 15, sad: 0, lookX: 0.6, lookY: -0.55, smile: 0, width: 0.78 },
-  speaking: { open: 0.72, lower: 0.38, pupil: 26, sad: 0, lookX: 0, lookY: 0.05, smile: 0.5, width: 1 },
-  concerned: { open: 0.82, lower: 0.12, pupil: 27, sad: 1, lookX: 0, lookY: 0.1, smile: -0.55, width: 0.85 },
-  sleeping: { open: 0, lower: 0.2, pupil: 24, sad: 0, lookX: 0, lookY: 0.3, smile: 0.25, width: 0.9 },
+  idle: { open: 0.6, lower: 0.36, pupil: 27, sad: 0, lookX: 0, lookY: 0.05, smile: 0.9, width: 1.1, part: 0.3 },
+  listening: { open: 0.95, lower: 0.12, pupil: 29, sad: 0, lookX: 0, lookY: -0.05, smile: 0.5, width: 1, part: 0.08 },
+  thinking: { open: 0.5, lower: 0.55, pupil: 15, sad: 0, lookX: 0.6, lookY: -0.55, smile: 0.1, width: 0.78, part: 0 },
+  speaking: { open: 0.72, lower: 0.4, pupil: 26, sad: 0, lookX: 0, lookY: 0.05, smile: 0.6, width: 1.04, part: 0.1 },
+  concerned: { open: 0.82, lower: 0.12, pupil: 27, sad: 1, lookX: 0, lookY: 0.1, smile: -0.55, width: 0.85, part: 0 },
+  sleeping: { open: 0, lower: 0.2, pupil: 24, sad: 0, lookX: 0, lookY: 0.3, smile: 0.45, width: 0.95, part: 0 },
 };
 
 /** Little moments of life while idle, borrowed from the reference animation. */
@@ -33,7 +34,7 @@ const GESTURES: { pose: Partial<Pose>; ms: number }[] = [
   { pose: { lookX: 0.7, lookY: 0 }, ms: 1300 },
   { pose: { open: 0.98, lower: 0.05, pupil: 31, lookY: -0.15 }, ms: 900 }, // curious, wide
   { pose: { open: 0.48, lower: 0.6, pupil: 14, lookX: 0.35 }, ms: 1000 }, // narrow, playful squint
-  { pose: { lower: 0.45, smile: 0.75 }, ms: 1200 }, // warm smile
+  { pose: { lower: 0.5, smile: 1.15, width: 1.18, part: 0.32 }, ms: 1300 }, // big warm smile
 ];
 
 type Key = keyof Pose;
@@ -63,9 +64,12 @@ function mouthPaths(p: Pose, open: number) {
   const cy = -p.smile * 11; // corners rise when smiling
   const mid = p.smile * 5; // middle sits lower than the corners when smiling
   const gap = open * 36;
+  // A smile stretches the upper lip thinner and lifts it with the corners.
+  const lift = Math.max(0, p.smile) * 6;
+  const peak = -19 + lift;
   const upperOuter =
-    `M ${-w} ${cy} C ${-w * 0.6} ${cy - 10} ${-w * 0.32} ${-20} ${-w * 0.14} ${-19} ` +
-    `Q 0 ${-13} ${w * 0.14} ${-19} C ${w * 0.32} ${-20} ${w * 0.6} ${cy - 10} ${w} ${cy}`;
+    `M ${-w} ${cy} C ${-w * 0.6} ${cy - 9 + lift * 0.3} ${-w * 0.32} ${peak - 1} ${-w * 0.14} ${peak} ` +
+    `Q 0 ${peak + 6} ${w * 0.14} ${peak} C ${w * 0.32} ${peak - 1} ${w * 0.6} ${cy - 9 + lift * 0.3} ${w} ${cy}`;
   const innerTopR = `C ${w * 0.5} ${mid - open * 7} ${-w * 0.5} ${mid - open * 7} ${-w} ${cy}`;
   const innerTop = `M ${-w} ${cy} C ${-w * 0.5} ${mid - open * 7} ${w * 0.5} ${mid - open * 7} ${w} ${cy}`;
   const innerBottom = `C ${w * 0.5} ${mid + gap} ${-w * 0.5} ${mid + gap} ${-w} ${cy}`;
@@ -159,7 +163,7 @@ export function KinlyFace({ expression, getVolume }: FaceProps) {
       }
 
       // Lips follow the voice, with varying width so syllables look different.
-      const vol = expression === "speaking" ? Math.min(1, getVolume() * 1.7) : 0;
+      const vol = Math.max(cur.part, expression === "speaking" ? Math.min(1, getVolume() * 1.7) : 0);
       mouthVel += ((vol - mouth) * 900 - mouthVel * 45) * dt;
       mouth = Math.max(0, mouth + mouthVel * dt);
       const syllable = expression === "speaking" ? Math.sin(t * 7.3) * 0.07 + Math.sin(t * 3.1) * 0.05 : 0;
@@ -210,8 +214,8 @@ export function KinlyFace({ expression, getVolume }: FaceProps) {
       els.lowerLip.setAttribute("d", m.lowerLip);
       els.interior.setAttribute("d", m.interior);
       els.mouthClip.setAttribute("d", m.interior);
-      els.teeth.setAttribute("y", (m.teethY - 2).toFixed(2));
-      els.teeth.setAttribute("height", Math.max(0, Math.min(9, m.gap * 0.32)).toFixed(2));
+      els.teeth.setAttribute("y", (m.teethY - 3).toFixed(2));
+      els.teeth.setAttribute("height", Math.max(0, Math.min(11, 3 + m.gap * 0.55)).toFixed(2));
       els.tongue.setAttribute("cy", (m.teethY + m.gap + 4).toFixed(2));
       els.tongue.setAttribute("ry", Math.max(0, m.gap * 0.42).toFixed(2));
     };
