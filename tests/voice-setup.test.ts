@@ -84,3 +84,11 @@ describe("voice setup from the dashboard", () => {
     expect(res.body).toMatchObject({ token: "tok-for-agent-1" });
   });
 });
+
+describe("agent config", () => {
+  it("uses an English-compatible voice model by default", async () => {
+    await handleSetupVoice(env, req({ method: "POST" }));
+    const body = el.agents[0].body as { conversation_config: { tts: { model_id: string } } };
+    expect(body.conversation_config.tts.model_id).toBe("eleven_flash_v2");
+  });
+});

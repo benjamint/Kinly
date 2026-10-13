@@ -124,7 +124,8 @@ export async function setupAgent(o: AgentSetupOptions): Promise<{ agentId: strin
       },
       tts: {
         voice_id: o.voiceId || "21m00Tcm4TlvDq8ikWAM",
-        model_id: o.ttsModel || "eleven_flash_v2_5",
+        // ElevenLabs requires English agents to use an English model (flash/turbo v2).
+        model_id: o.ttsModel || "eleven_flash_v2",
       },
       turn: { turn_timeout: 12 }, // elders often pause; don't jump in too fast
     },
