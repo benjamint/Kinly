@@ -44,6 +44,10 @@ function devApi(): Plugin {
                   ? await h.handleSession(env, apiReq)
                   : path === "setup-voice"
                     ? await h.handleSetupVoice(env, apiReq)
+                    : path === "push"
+                      ? await h.handlePush(env, apiReq)
+                      : path === "push-ack"
+                        ? await h.handlePushAck(env, apiReq)
                   : path.startsWith("tools/")
                     ? await h.handleTool(env, path.slice("tools/".length), apiReq)
                     : { status: 404, body: { error: "Not found." } };
@@ -86,7 +90,8 @@ export default defineConfig(({ mode }) => {
             { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
           ],
         },
-        workbox: { navigateFallbackDenylist: [/^\/api\//] },
+        // push-sw.js adds the notification handlers to the generated service worker.
+        workbox: { navigateFallbackDenylist: [/^\/api\//], importScripts: ["/push-sw.js"] },
       }),
     ],
     server: { host: true },

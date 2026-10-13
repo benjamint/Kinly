@@ -17,6 +17,8 @@ interface ServerConfig {
   /** The key is set but the agent hasn't been created yet. */
   voiceSetupAvailable?: boolean;
   voiceError?: string;
+  /** VAPID public key for push alerts, when the server can send them. */
+  pushPublicKey?: string;
 }
 
 interface HouseholdContextValue {
@@ -31,6 +33,8 @@ interface HouseholdContextValue {
   refresh: () => void;
   /** Create the Kinly agent in ElevenLabs from the deployed app. */
   setupVoice: () => Promise<void>;
+  /** Authenticated POST to another household endpoint (e.g. "push"). */
+  post: <T = unknown>(path: string, body: unknown) => Promise<T>;
 }
 
 const CONNECTION_KEY = "kinly.connection";
@@ -179,6 +183,14 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
 
   const refresh = useCallback(() => pullRef.current(), []);
 
+  const post = useCallback(
+    <T,>(path: string, body: unknown) => {
+      if (connection?.mode !== "cloud") return Promise.reject(new Error("Join a household first."));
+      return api<T>(path, connection, body);
+    },
+    [connection],
+  );
+
   const setupVoice = useCallback(async () => {
     if (connection?.mode !== "cloud") throw new Error("Join a household first.");
     await api("setup-voice", connection, {});
@@ -186,8 +198,8 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   }, [connection, loadConfig]);
 
   const value = useMemo(
-    () => ({ household, connection, config, error, dispatch, connect, disconnect, refresh, setupVoice }),
-    [household, connection, config, error, dispatch, connect, disconnect, refresh, setupVoice],
+    () => ({ household, connection, config, error, dispatch, connect, disconnect, refresh, setupVoice, post }),
+    [household, connection, config, error, dispatch, connect, disconnect, refresh, setupVoice, post],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

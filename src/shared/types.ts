@@ -80,6 +80,13 @@ export interface Household {
   logs: ReminderLog[];
   messages: Message[];
   alerts: Alert[];
+  /** Server-only: family phones subscribed to push alerts. Never sent to browsers. */
+  push?: {
+    endpoint: string;
+    keys: { p256dh: string; auth: string };
+    familyName: string;
+    createdAt: string;
+  }[];
 }
 
 export type HouseholdAction =

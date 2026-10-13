@@ -1,8 +1,17 @@
 import { timingSafeEqual } from "node:crypto";
 import { agentContext, localClock, todaysReminders, unreadFamilyMessages } from "../src/shared/household.js";
-import type { HouseholdAction } from "../src/shared/types.js";
+import type { Household, HouseholdAction } from "../src/shared/types.js";
 import { findAgentId, setupAgent } from "./agent-setup.js";
-import { mutate, sha256, SupabaseStore, type HouseholdStore } from "./store.js";
+import {
+  notificationsFor,
+  sendAll,
+  vapidKeys,
+  verifyAckToken,
+  webPushSender,
+  type PushRecord,
+  type PushSender,
+} from "./push.js";
+import { mutate, sha256, SupabaseStore, update, type HouseholdStore } from "./store.js";
 
 // Framework-agnostic request handlers. `api/*.ts` adapts them for Vercel and
 // vite.config.ts mounts them on the dev server, so both run the same code.
@@ -27,6 +36,8 @@ export interface ServerEnv {
   agentLlm?: string;
   voiceId?: string;
   ttsModel?: string;
+  /** Overrides the real web push sender (tests). */
+  pushSender?: PushSender;
   fetch: typeof fetch;
 }
 
@@ -47,6 +58,39 @@ export function envFromProcess(env: NodeJS.ProcessEnv = process.env): ServerEnv 
 }
 
 const json = (status: number, body: unknown): ApiResponse => ({ status, body });
+
+/** What browsers see: everything except the push subscriptions. */
+function publicView(h: Household): Omit<Household, "push"> {
+  const { push: _push, ...rest } = h;
+  void _push;
+  return rest;
+}
+
+function pushSender(env: ServerEnv): PushSender | null {
+  if (env.pushSender) return env.pushSender;
+  if (!env.toolSecret) return null;
+  return webPushSender(vapidKeys(env.toolSecret), process.env.VAPID_SUBJECT || "mailto:alerts@kinly.app");
+}
+
+/** Push alerts/messages that a change created, and forget phones that unsubscribed. */
+async function notify(env: ServerEnv, change: { before: Household; after: Household } | null) {
+  const send = pushSender(env);
+  if (!change || !send || !env.store || !env.toolSecret) return;
+  const gone = await sendAll(notificationsFor(change.before, change.after, env.toolSecret), send);
+  if (gone.length) {
+    await update(env.store, change.after.id, (h) => ({
+      ...h,
+      push: (h.push ?? []).filter((p) => !gone.includes(p.endpoint)),
+    }));
+  }
+}
+
+/** Apply actions, then send any notifications they call for. */
+async function apply(env: ServerEnv, id: string, actions: HouseholdAction[]) {
+  const change = await mutate(env.store!, id, actions);
+  await notify(env, change);
+  return change?.after ?? null;
+}
 
 function safeEqual(a: string, b: string): boolean {
   const ab = Buffer.from(a);
@@ -101,7 +145,76 @@ export async function handleConfig(env: ServerEnv): Promise<ApiResponse> {
     // Key is set but the agent doesn't exist yet: the dashboard offers to create it.
     voiceSetupAvailable: Boolean(env.elevenLabsApiKey && env.toolSecret && !agentReady),
     voiceError,
+    pushPublicKey: env.store && env.toolSecret ? vapidKeys(env.toolSecret).publicKey : undefined,
   });
+}
+
+function isSubscription(x: unknown): x is Pick<PushRecord, "endpoint" | "keys"> {
+  const s = x as PushRecord;
+  return (
+    !!s &&
+    typeof s.endpoint === "string" &&
+    s.endpoint.startsWith("https://") &&
+    s.endpoint.length < 1000 &&
+    typeof s.keys?.p256dh === "string" &&
+    typeof s.keys?.auth === "string"
+  );
+}
+
+/** Turn alerts on/off for this phone, or send it a test. */
+export async function handlePush(env: ServerEnv, req: ApiRequest): Promise<ApiResponse> {
+  if (req.method !== "POST") return json(405, { error: "Method not allowed." });
+  const auth = await authorizeHousehold(env, req);
+  if ("error" in auth) return auth.error!;
+  const send = pushSender(env);
+  if (!send) return json(503, { error: "Add KINLY_TOOL_SECRET in Vercel to use alerts." });
+  const body = (req.body ?? {}) as { action?: string; subscription?: unknown; familyName?: string };
+  if (!isSubscription(body.subscription)) return json(400, { error: "Missing push subscription." });
+  const { endpoint, keys } = body.subscription;
+
+  if (body.action === "subscribe") {
+    const familyName = (body.familyName ?? "").trim().slice(0, 60) || "Family";
+    await update(auth.store, auth.id, (h, now) => ({
+      ...h,
+      push: [
+        ...(h.push ?? []).filter((p) => p.endpoint !== endpoint),
+        { endpoint, keys: { p256dh: keys.p256dh, auth: keys.auth }, familyName, createdAt: now.toISOString() },
+      ].slice(-50),
+    }));
+    return json(200, { ok: true });
+  }
+  if (body.action === "unsubscribe") {
+    await update(auth.store, auth.id, (h) => ({ ...h, push: (h.push ?? []).filter((p) => p.endpoint !== endpoint) }));
+    return json(200, { ok: true });
+  }
+  if (body.action === "test") {
+    const result = await send(
+      { endpoint, keys, familyName: body.familyName ?? "Family", createdAt: "" },
+      {
+        title: "Kinly alerts are on",
+        body: `You'll be told here if ${auth.row.household.elder.name} needs help.`,
+        tag: "kinly-test",
+        url: "/family",
+      },
+    );
+    return result === "ok" ? json(200, { ok: true }) : json(502, { error: "The phone's push service refused the test." });
+  }
+  return json(400, { error: "Unknown action." });
+}
+
+/** "I'm on it" pressed on a notification: acknowledged with a signed token instead of the PIN. */
+export async function handlePushAck(env: ServerEnv, req: ApiRequest): Promise<ApiResponse> {
+  if (req.method !== "POST") return json(405, { error: "Method not allowed." });
+  if (!env.store || !env.toolSecret) return json(503, { error: "Not configured." });
+  const b = (req.body ?? {}) as Record<string, unknown>;
+  const [householdId, alertId, by, token] = [b.householdId, b.alertId, b.by, b.token].map((v) =>
+    typeof v === "string" ? v : "",
+  );
+  if (!householdId || !alertId || !by || !verifyAckToken(env.toolSecret, householdId, alertId, by, token)) {
+    return json(401, { error: "Invalid link." });
+  }
+  const after = await apply(env, householdId, [{ type: "acknowledgeAlert", alertId, by }]);
+  return after ? json(200, { ok: true }) : json(404, { error: "Unknown household." });
 }
 
 /** Creates or updates the Kinly agent from the deployed app. Any household member can run it. */
@@ -150,7 +263,7 @@ const CLIENT_ACTIONS = new Set<HouseholdAction["type"]>([
 export async function handleHousehold(env: ServerEnv, req: ApiRequest): Promise<ApiResponse> {
   const auth = await authorizeHousehold(env, req);
   if ("error" in auth) return auth.error!;
-  if (req.method === "GET") return json(200, auth.row.household);
+  if (req.method === "GET") return json(200, publicView(auth.row.household));
   if (req.method !== "POST") return json(405, { error: "Method not allowed." });
 
   const actions = (req.body as { actions?: unknown })?.actions;
@@ -162,8 +275,8 @@ export async function handleHousehold(env: ServerEnv, req: ApiRequest): Promise<
   ) {
     return json(400, { error: "Expected { actions: [...] }." });
   }
-  const next = await mutate(auth.store, auth.id, actions as HouseholdAction[]);
-  return json(200, next);
+  const next = await apply(env, auth.id, actions as HouseholdAction[]);
+  return json(200, next && publicView(next));
 }
 
 /** Mints a short-lived ElevenLabs conversation token so the API key never reaches the device. */
@@ -228,13 +341,13 @@ export async function handleTool(
         return json(200, { ok: false, result: "No reminder with that id. Call get_reminders first." });
       }
       const { date } = localClock(now, household.elder.timezone);
-      await mutate(env.store, id, [{ type: "confirmReminder", reminderId, date }]);
+      await apply(env, id, [{ type: "confirmReminder", reminderId, date }]);
       return json(200, { ok: true, result: "Logged as taken. The family can see it." });
     }
     case "get_family_messages": {
       const unread = unreadFamilyMessages(household);
       if (unread.length) {
-        await mutate(env.store, id, [{ type: "markMessagesRead", ids: unread.map((m) => m.id) }]);
+        await apply(env, id, [{ type: "markMessagesRead", ids: unread.map((m) => m.id) }]);
       }
       return json(200, {
         messages: unread.map((m) => ({ from: m.familyName, text: m.text, sent_at: m.at })),
@@ -245,14 +358,14 @@ export async function handleTool(
       const text = str("message");
       if (!text) return json(200, { ok: false, result: "The message was empty." });
       const known = household.family.find((f) => f.name.toLowerCase() === familyName.toLowerCase());
-      await mutate(env.store, id, [
+      await apply(env, id, [
         { type: "elderMessage", familyName: known?.name ?? (familyName || "Family"), text: text.slice(0, 1000) },
       ]);
       return json(200, { ok: true, result: `Message sent to ${known?.name ?? "the family"}.` });
     }
     case "raise_alert": {
       const reason = str("reason") || "Asked for help during a conversation.";
-      await mutate(env.store, id, [{ type: "raiseAlert", source: "voice", reason: reason.slice(0, 500) }]);
+      await apply(env, id, [{ type: "raiseAlert", source: "voice", reason: reason.slice(0, 500) }]);
       return json(200, {
         ok: true,
         result: "The family has been alerted. Stay with the person and reassure them.",

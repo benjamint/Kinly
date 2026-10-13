@@ -4,6 +4,7 @@ import { useHousehold } from "../lib/household-context";
 import { newId, openAlerts, todaysReminders } from "../shared/household";
 import type { Household, Language, Reminder, ReminderKind } from "../shared/types";
 import { timeAgo } from "../elder/Sheets";
+import { AlertsCard } from "./AlertsCard";
 
 const ME_KEY = "kinly.familyMe";
 
@@ -116,6 +117,8 @@ function DashboardView({
           </ul>
         </section>
       )}
+
+      {mode === "cloud" && <AlertsCard me={me} />}
 
       <div className="dash__grid">
         <section className="card" aria-labelledby="today-h">

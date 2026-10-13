@@ -73,20 +73,31 @@ export class MemoryStore implements HouseholdStore {
   }
 }
 
-/** Apply actions with optimistic concurrency, retrying if another writer got there first. */
+/**
+ * Apply a change with optimistic concurrency, retrying if another writer got
+ * there first. Returns the state before and after the change that was saved.
+ */
+export async function update(
+  store: HouseholdStore,
+  id: string,
+  change: (h: Household, now: Date) => Household,
+): Promise<{ before: Household; after: Household } | null> {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const row = await store.load(id);
+    if (!row) return null;
+    const after = change(row.household, new Date());
+    if (await store.save(id, after, row.version)) return { before: row.household, after };
+  }
+  throw new Error("Household is busy, please try again.");
+}
+
+/** Apply household actions (see applyAction). */
 export async function mutate(
   store: HouseholdStore,
   id: string,
   actions: HouseholdAction[],
-): Promise<Household | null> {
-  for (let attempt = 0; attempt < 5; attempt++) {
-    const row = await store.load(id);
-    if (!row) return null;
-    const now = new Date();
-    const next = actions.reduce((h, a) => applyAction(h, a, now), row.household);
-    if (await store.save(id, next, row.version)) return next;
-  }
-  throw new Error("Household is busy, please try again.");
+): Promise<{ before: Household; after: Household } | null> {
+  return update(store, id, (h, now) => actions.reduce((x, a) => applyAction(x, a, now), h));
 }
 
 export async function sha256(text: string): Promise<string> {

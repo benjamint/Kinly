@@ -32,7 +32,8 @@ Open the address it prints (use the `Network` one on your Android phone, same Wi
    - `ELEVENLABS_API_KEY`: from ElevenLabs → Developers → API Keys
    - `KINLY_TOOL_SECRET`: any long random string
 3. **Set up the voice**: open `<your site>/family`, join with your household code and PIN, and press **Set up Kinly's voice**. The app creates the Kinly agent and its five tools in your ElevenLabs account. There's no id to copy: the app finds the agent by its name, "Kinly".
-4. On the Android tablet, open the site in Chrome, join the same household, then use **⋮ → Add to Home screen**. It opens full screen and keeps the screen on.
+4. **Alerts on family phones**: each family member opens `<your site>/family` on their phone, picks their name under "I am", and presses **Turn on alerts**. They then get a notification when the elder presses Help, says something worrying, misses a medicine, or sends them a message. The notification's **I'm on it** button tells everyone else it's handled. Alerts are free web push and need no extra accounts. On iPhone, add the site to the Home Screen first (iOS 16.4+).
+5. On the Android tablet, open the site in Chrome, join the same household, then use **⋮ → Add to Home screen**. It opens full screen and keeps the screen on.
 
 To change Kinly's personality or tools later, edit `agent/prompt.ts` or `agent/tools.json`, push, and press the setup button again (it updates the agent instead of making a new one). You can also choose the voice and model in the ElevenLabs dashboard, or set `ELEVENLABS_VOICE_ID`, `ELEVENLABS_TTS_MODEL` and `KINLY_AGENT_LLM` in Vercel. Pick the newest Claude model the agent settings list, and check that your TTS model supports Kiswahili before switching a household to it.
 
