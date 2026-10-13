@@ -13,6 +13,8 @@ export interface HouseholdStore {
   /** Writes only if the stored version still equals `expectedVersion`. */
   save(id: string, household: Household, expectedVersion: number): Promise<boolean>;
   create(household: Household, pinHash: string): Promise<void>;
+  /** All household ids (for the scheduled reminder check). */
+  listIds(): Promise<string[]>;
 }
 
 export class SupabaseStore implements HouseholdStore {
@@ -44,6 +46,12 @@ export class SupabaseStore implements HouseholdStore {
     return (data?.length ?? 0) > 0;
   }
 
+  async listIds(): Promise<string[]> {
+    const { data, error } = await this.db.from("households").select("id").limit(1000);
+    if (error) throw error;
+    return (data ?? []).map((r) => r.id as string);
+  }
+
   async create(household: Household, pinHash: string): Promise<void> {
     const { error } = await this.db
       .from("households")
@@ -55,6 +63,10 @@ export class SupabaseStore implements HouseholdStore {
 /** In-memory store for tests and for running the API without Supabase. */
 export class MemoryStore implements HouseholdStore {
   rows = new Map<string, HouseholdRow>();
+
+  async listIds() {
+    return [...this.rows.keys()];
+  }
 
   async load(id: string) {
     const row = this.rows.get(id);

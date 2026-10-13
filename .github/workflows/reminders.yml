@@ -1,0 +1,24 @@
+# Every 5 minutes, ask the deployed app to check for missed medicines and
+# alert the family. Free, and works even when the elder's tablet is off.
+# GitHub may delay scheduled runs by a few minutes when busy.
+#
+# Set the repository variable KINLY_URL (Settings → Secrets and variables →
+# Actions → Variables) if your site isn't https://kinly-olive.vercel.app.
+name: Reminder check
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Check reminders
+        env:
+          KINLY_URL: ${{ vars.KINLY_URL || 'https://kinly-olive.vercel.app' }}
+        run: curl --fail-with-body --silent --show-error --max-time 60 -X POST "$KINLY_URL/api/cron/reminders"

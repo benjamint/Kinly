@@ -90,6 +90,6 @@ tests/            vitest: state logic, demo brain, scheduler, API + tools
 ## Prototype shortcuts (not for real users yet)
 
 - Household access is a code and PIN, with no rate limiting or real accounts.
-- Missed-reminder detection runs on the tablet, so it only works while the tablet is on. It should move to a server cron.
+- Missed medicines are checked on the server every 5 minutes by a free GitHub Actions schedule (`.github/workflows/reminders.yml` calls `/api/cron/reminders`). GitHub can delay scheduled runs by a few minutes. For tighter timing, point any external cron (e.g. Supabase pg_cron or cron-job.org) at the same URL.
 - The family dashboard refreshes every 5 seconds instead of using push notifications, SMS or WhatsApp.
 - Health data needs proper consent, residency and retention rules (PRD PR-1) before any real pilot.

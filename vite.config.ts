@@ -48,6 +48,8 @@ function devApi(): Plugin {
                       ? await h.handlePush(env, apiReq)
                       : path === "push-ack"
                         ? await h.handlePushAck(env, apiReq)
+                        : path === "cron/reminders"
+                          ? await h.handleReminderCheck(env, apiReq)
                   : path.startsWith("tools/")
                     ? await h.handleTool(env, path.slice("tools/".length), apiReq)
                     : { status: 404, body: { error: "Not found." } };

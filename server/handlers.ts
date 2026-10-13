@@ -1,5 +1,11 @@
 import { timingSafeEqual } from "node:crypto";
-import { agentContext, localClock, todaysReminders, unreadFamilyMessages } from "../src/shared/household.js";
+import {
+  agentContext,
+  localClock,
+  overdueReminders,
+  todaysReminders,
+  unreadFamilyMessages,
+} from "../src/shared/household.js";
 import type { Household, HouseholdAction } from "../src/shared/types.js";
 import { findAgentId, setupAgent } from "./agent-setup.js";
 import {
@@ -374,4 +380,39 @@ export async function handleTool(
     default:
       return json(404, { error: `Unknown tool "${name}".` });
   }
+}
+
+/**
+ * Scheduled check (every few minutes, see .github/workflows/reminders.yml):
+ * logs unconfirmed medicines and meals as missed and alerts the family, even
+ * when the elder's tablet is off. Needs no secret: it only does what is due
+ * anyway, is safe to repeat, and returns counts, never household data.
+ */
+export async function handleReminderCheck(env: ServerEnv, req: ApiRequest): Promise<ApiResponse> {
+  if (req.method !== "POST" && req.method !== "GET") return json(405, { error: "Method not allowed." });
+  if (!env.store) return json(503, { error: "Cloud storage is not configured." });
+  const now = new Date();
+  let checked = 0;
+  let missed = 0;
+  let failed = 0;
+  for (const id of await env.store.listIds()) {
+    checked++;
+    try {
+      const row = await env.store.load(id);
+      if (!row) continue;
+      const overdue = overdueReminders(row.household, now);
+      if (!overdue.length) continue;
+      // markMissed is a no-op if the reminder was confirmed in the meantime.
+      await apply(
+        env,
+        id,
+        overdue.map((t) => ({ type: "markMissed" as const, reminderId: t.reminder.id, date: t.date })),
+      );
+      missed += overdue.length;
+    } catch (e) {
+      console.error("reminder check failed for a household", e);
+      failed++;
+    }
+  }
+  return json(200, { checked, missed, failed });
 }
