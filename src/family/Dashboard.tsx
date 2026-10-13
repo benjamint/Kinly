@@ -137,6 +137,7 @@ function DashboardView({
         <Messages household={household} me={me} dispatch={dispatch} now={now} />
       </div>
 
+      {mode === "cloud" && <VoiceCard />}
       <ReminderEditor household={household} dispatch={dispatch} />
       <SettingsCard household={household} dispatch={dispatch} />
       <p className="dash__foot">
@@ -145,6 +146,47 @@ function DashboardView({
         </button>
       </p>
     </div>
+  );
+}
+
+/** Shows whether Kinly's live voice is ready, and sets it up with one press. */
+function VoiceCard() {
+  const { config, setupVoice } = useHousehold();
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<string | null>(null);
+  if (config.voice && !result) return null;
+  const run = async () => {
+    setBusy(true);
+    setResult(null);
+    try {
+      await setupVoice();
+      setResult("Kinly's voice is ready. Tap the face on the elder's screen to talk.");
+    } catch (e) {
+      setResult((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <section className="card" aria-labelledby="voice-h">
+      <h2 id="voice-h">Kinly's voice</h2>
+      {config.voiceSetupAvailable ? (
+        <>
+          <p>Kinly is using the phone's practice voice. Set up the real ElevenLabs voice; this takes about 20 seconds.</p>
+          <button className="btn btn--primary" onClick={run} disabled={busy}>
+            {busy ? "Setting up…" : "Set up Kinly's voice"}
+          </button>
+        </>
+      ) : (
+        !result && (
+          <p className="muted">
+            To use the real voice, add ELEVENLABS_API_KEY and KINLY_TOOL_SECRET in Vercel and redeploy.
+            {config.voiceError && ` (${config.voiceError})`}
+          </p>
+        )
+      )}
+      {result && <p role="status">{result}</p>}
+    </section>
   );
 }
 

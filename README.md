@@ -26,14 +26,15 @@ Open the address it prints (use the `Network` one on your Android phone, same Wi
 
 ### Live mode
 
-1. **Supabase**: create a project, run `supabase/migrations/0001_init.sql` in the SQL editor, then copy the URL and the **service role** key.
-2. **Environment**: `cp .env.example .env` and fill it in. Make `KINLY_TOOL_SECRET` a long random string.
-3. **Deploy to Vercel** (import the repo; the framework is detected as Vite) and add the same variables in Project → Settings → Environment Variables. Put the deployed URL in `KINLY_PUBLIC_URL`.
-4. **Create the agent**: `npm run sync-agent`. This creates the five webhook tools and the Kinly agent in your ElevenLabs account from `agent/`. Add the printed `ELEVENLABS_AGENT_ID` to `.env` and Vercel, then redeploy. After that, re-run `npm run sync-agent` whenever you edit the prompt or tools.
-5. **Create a household**: `npm run create-household -- mama-ama 482913 Ama Africa/Accra` (code, 6+ digit PIN, name, time zone).
-6. On the Android tablet, open the site in Chrome, choose **Join your household**, then use **⋮ → Add to Home screen**. It now opens full screen like an app and keeps the screen on.
+1. **Supabase**: create a project. In the SQL Editor, paste `supabase/setup.sql`, change the household code and PIN on the two marked lines, and run it. From Project Settings → API, note the Project URL and the **service_role** key.
+2. **Vercel**: import this repo at vercel.com/new (the framework is detected as Vite). Before deploying, add these environment variables:
+   - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`: from step 1
+   - `ELEVENLABS_API_KEY`: from ElevenLabs → Developers → API Keys
+   - `KINLY_TOOL_SECRET`: any long random string
+3. **Set up the voice**: open `<your site>/family`, join with your household code and PIN, and press **Set up Kinly's voice**. The app creates the Kinly agent and its five tools in your ElevenLabs account. There's no id to copy: the app finds the agent by its name, "Kinly".
+4. On the Android tablet, open the site in Chrome, join the same household, then use **⋮ → Add to Home screen**. It opens full screen and keeps the screen on.
 
-> `sync-agent` targets ElevenLabs' agents/tools API. If ElevenLabs has changed a field name, the script prints the error; you can also set the agent up by hand in the ElevenLabs dashboard using `agent/system-prompt.md` and `agent/tools.json` (each tool is a POST webhook to `<your site>/api/tools/<name>` with header `x-kinly-tool-secret`, plus a `household_id` body field bound to the `household_id` dynamic variable). Turn on overrides for first message, language and TTS speed. Pick the newest Claude model the agent settings list and a warm voice, and check that your TTS model supports Kiswahili before switching a household to it.
+To change Kinly's personality or tools later, edit `agent/prompt.ts` or `agent/tools.json`, push, and press the setup button again (it updates the agent instead of making a new one). You can also choose the voice and model in the ElevenLabs dashboard, or set `ELEVENLABS_VOICE_ID`, `ELEVENLABS_TTS_MODEL` and `KINLY_AGENT_LLM` in Vercel. Pick the newest Claude model the agent settings list, and check that your TTS model supports Kiswahili before switching a household to it.
 
 ## How it works
 
@@ -64,7 +65,7 @@ src/lib/          household data (local or cloud), voice engines (ElevenLabs + d
 src/shared/       data model and state logic shared with the server
 server/           API handlers + Supabase store (used by Vercel and the dev server)
 api/              Vercel function entry points
-agent/            agent system prompt and tool definitions (synced to ElevenLabs)
+agent/            agent prompt and tool definitions (pushed to ElevenLabs by the setup button)
 scripts/          sync-agent, create-household
 tests/            vitest: state logic, demo brain, scheduler, API + tools
 ```
@@ -91,5 +92,3 @@ tests/            vitest: state logic, demo brain, scheduler, API + tools
 - Missed-reminder detection runs on the tablet, so it only works while the tablet is on. It should move to a server cron.
 - The family dashboard refreshes every 5 seconds instead of using push notifications, SMS or WhatsApp.
 - Health data needs proper consent, residency and retention rules (PRD PR-1) before any real pilot.
-
-> **Quick Supabase setup without the CLI:** paste `supabase/setup.sql` into the Supabase SQL Editor, change the household code and PIN on the two marked lines, and run it. It creates the table and a first household with the demo reminders.

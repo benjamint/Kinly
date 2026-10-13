@@ -12,7 +12,11 @@ export type Connection = { mode: "local" } | { mode: "cloud"; id: string; pin: s
 
 interface ServerConfig {
   cloud: boolean;
+  /** The ElevenLabs agent exists and live voice can be used. */
   voice: boolean;
+  /** The key is set but the agent hasn't been created yet. */
+  voiceSetupAvailable?: boolean;
+  voiceError?: string;
 }
 
 interface HouseholdContextValue {
@@ -25,6 +29,8 @@ interface HouseholdContextValue {
   disconnect: () => void;
   /** Re-read the household now (e.g. after the voice agent changed it). */
   refresh: () => void;
+  /** Create the Kinly agent in ElevenLabs from the deployed app. */
+  setupVoice: () => Promise<void>;
 }
 
 const CONNECTION_KEY = "kinly.connection";
@@ -88,14 +94,17 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   householdRef.current = household;
   const pullRef = useRef<() => void>(() => {});
 
-  useEffect(() => {
-    fetch("/api/config")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((c: ServerConfig | null) => c && setConfig(c))
-      .catch(() => {
-        /* static hosting, no API: local mode only */
-      });
-  }, []);
+  const loadConfig = useCallback(
+    () =>
+      fetch("/api/config")
+        .then((r) => (r.ok ? r.json() : null))
+        .then((c: ServerConfig | null) => c && setConfig(c))
+        .catch(() => {
+          /* static hosting, no API: local mode only */
+        }),
+    [],
+  );
+  useEffect(() => void loadConfig(), [loadConfig]);
 
   // Load + keep fresh.
   useEffect(() => {
@@ -170,9 +179,15 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
 
   const refresh = useCallback(() => pullRef.current(), []);
 
+  const setupVoice = useCallback(async () => {
+    if (connection?.mode !== "cloud") throw new Error("Join a household first.");
+    await api("setup-voice", connection, {});
+    await loadConfig();
+  }, [connection, loadConfig]);
+
   const value = useMemo(
-    () => ({ household, connection, config, error, dispatch, connect, disconnect, refresh }),
-    [household, connection, config, error, dispatch, connect, disconnect, refresh],
+    () => ({ household, connection, config, error, dispatch, connect, disconnect, refresh, setupVoice }),
+    [household, connection, config, error, dispatch, connect, disconnect, refresh, setupVoice],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

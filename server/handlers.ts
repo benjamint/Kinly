@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { agentContext, localClock, todaysReminders, unreadFamilyMessages } from "../src/shared/household";
 import type { HouseholdAction } from "../src/shared/types";
+import { findAgentId, setupAgent } from "./agent-setup";
 import { mutate, sha256, SupabaseStore, type HouseholdStore } from "./store";
 
 // Framework-agnostic request handlers. `api/*.ts` adapts them for Vercel and
@@ -23,6 +24,9 @@ export interface ServerEnv {
   elevenLabsApiKey?: string;
   elevenLabsAgentId?: string;
   toolSecret?: string;
+  agentLlm?: string;
+  voiceId?: string;
+  ttsModel?: string;
   fetch: typeof fetch;
 }
 
@@ -35,6 +39,9 @@ export function envFromProcess(env: NodeJS.ProcessEnv = process.env): ServerEnv 
     elevenLabsApiKey: env.ELEVENLABS_API_KEY,
     elevenLabsAgentId: env.ELEVENLABS_AGENT_ID,
     toolSecret: env.KINLY_TOOL_SECRET,
+    agentLlm: env.KINLY_AGENT_LLM,
+    voiceId: env.ELEVENLABS_VOICE_ID,
+    ttsModel: env.ELEVENLABS_TTS_MODEL,
     fetch: globalThis.fetch,
   };
 }
@@ -60,11 +67,68 @@ async function authorizeHousehold(env: ServerEnv, req: ApiRequest) {
   return { row, store: env.store, id };
 }
 
+// The agent is found by name, so nobody has to copy its id into Vercel.
+// Cached per server instance; a miss is re-checked after a minute.
+let agentCache: { key: string; id: string | null; at: number } | null = null;
+
+export function resetAgentCache() {
+  agentCache = null;
+}
+
+async function resolveAgentId(env: ServerEnv): Promise<string | null> {
+  if (env.elevenLabsAgentId) return env.elevenLabsAgentId;
+  if (!env.elevenLabsApiKey) return null;
+  const fresh = agentCache && agentCache.key === env.elevenLabsApiKey && (agentCache.id || Date.now() - agentCache.at < 60_000);
+  if (!fresh) {
+    agentCache = { key: env.elevenLabsApiKey, id: await findAgentId(env.elevenLabsApiKey, env.fetch), at: Date.now() };
+  }
+  return agentCache!.id;
+}
+
 export async function handleConfig(env: ServerEnv): Promise<ApiResponse> {
+  let agentReady = false;
+  let voiceError: string | undefined;
+  if (env.elevenLabsApiKey) {
+    try {
+      agentReady = Boolean(await resolveAgentId(env));
+    } catch (e) {
+      voiceError = (e as Error).message;
+    }
+  }
   return json(200, {
     cloud: Boolean(env.store),
-    voice: Boolean(env.elevenLabsApiKey && env.elevenLabsAgentId),
+    voice: agentReady,
+    // Key is set but the agent doesn't exist yet: the dashboard offers to create it.
+    voiceSetupAvailable: Boolean(env.elevenLabsApiKey && env.toolSecret && !agentReady),
+    voiceError,
   });
+}
+
+/** Creates or updates the Kinly agent from the deployed app. Any household member can run it. */
+export async function handleSetupVoice(env: ServerEnv, req: ApiRequest): Promise<ApiResponse> {
+  if (req.method !== "POST") return json(405, { error: "Method not allowed." });
+  const auth = await authorizeHousehold(env, req);
+  if ("error" in auth) return auth.error!;
+  if (!env.elevenLabsApiKey) return json(503, { error: "Add ELEVENLABS_API_KEY in Vercel first." });
+  if (!env.toolSecret) return json(503, { error: "Add KINLY_TOOL_SECRET in Vercel first." });
+  const host = req.headers["x-forwarded-host"] ?? req.headers.host;
+  if (!host) return json(400, { error: "Could not tell this site's address." });
+  const proto = req.headers["x-forwarded-proto"] ?? (host.startsWith("localhost") ? "http" : "https");
+  try {
+    const result = await setupAgent({
+      apiKey: env.elevenLabsApiKey,
+      publicUrl: `${proto}://${host}`,
+      toolSecret: env.toolSecret,
+      llm: env.agentLlm,
+      voiceId: env.voiceId,
+      ttsModel: env.ttsModel,
+      fetch: env.fetch,
+    });
+    agentCache = { key: env.elevenLabsApiKey, id: result.agentId, at: Date.now() };
+    return json(200, result);
+  } catch (e) {
+    return json(502, { error: (e as Error).message });
+  }
 }
 
 // Only actions a screen may send; everything else is rejected.
@@ -106,11 +170,12 @@ export async function handleHousehold(env: ServerEnv, req: ApiRequest): Promise<
 export async function handleSession(env: ServerEnv, req: ApiRequest): Promise<ApiResponse> {
   const auth = await authorizeHousehold(env, req);
   if ("error" in auth) return auth.error!;
-  if (!env.elevenLabsApiKey || !env.elevenLabsAgentId) {
-    return json(503, { error: "Voice is not configured." });
+  const agentId = env.elevenLabsApiKey ? await resolveAgentId(env) : null;
+  if (!env.elevenLabsApiKey || !agentId) {
+    return json(503, { error: "Voice is not set up yet. Use \"Set up Kinly's voice\" on the family dashboard." });
   }
   const res = await env.fetch(
-    `https://api.elevenlabs.io/v1/convai/conversation/token?agent_id=${encodeURIComponent(env.elevenLabsAgentId)}`,
+    `https://api.elevenlabs.io/v1/convai/conversation/token?agent_id=${encodeURIComponent(agentId)}`,
     { headers: { "xi-api-key": env.elevenLabsApiKey } },
   );
   if (!res.ok) return json(502, { error: `ElevenLabs refused the session (${res.status}).` });

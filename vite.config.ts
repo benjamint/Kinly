@@ -42,6 +42,8 @@ function devApi(): Plugin {
                 ? await h.handleHousehold(env, apiReq)
                 : path === "session"
                   ? await h.handleSession(env, apiReq)
+                  : path === "setup-voice"
+                    ? await h.handleSetupVoice(env, apiReq)
                   : path.startsWith("tools/")
                     ? await h.handleTool(env, path.slice("tools/".length), apiReq)
                     : { status: 404, body: { error: "Not found." } };
