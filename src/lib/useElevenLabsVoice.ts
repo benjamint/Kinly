@@ -32,9 +32,16 @@ export function useElevenLabsVoice(
   const capTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   // Told to the agent as soon as the session connects (e.g. "Help was pressed").
   const pendingContext = useRef<string | null>(null);
+  // Set by stop(): a start that is still getting the microphone or a token,
+  // or a session still connecting, must not carry on and start talking.
+  const cancelled = useRef(false);
 
   const conversation = useConversation({
     onConnect: () => {
+      if (cancelled.current) {
+        conversationRef.current?.endSession();
+        return;
+      }
       connectedAt.current = Date.now();
       const note = pendingContext.current;
       pendingContext.current = null;
@@ -74,6 +81,7 @@ export function useElevenLabsVoice(
       if (!connection || !household) return;
       setError(null);
       setStarting(true);
+      cancelled.current = false;
       pendingContext.current = options.context ?? null;
       try {
         // Starting something new (Help, a reminder) while a conversation is on:
@@ -84,7 +92,9 @@ export function useElevenLabsVoice(
         }
         // The browser must grant the microphone before the session starts.
         await navigator.mediaDevices.getUserMedia({ audio: true });
+        if (cancelled.current) return;
         const { token, dynamicVariables, minutesLeft } = await fetchSession(connection, options.purpose ?? "chat");
+        if (cancelled.current) return;
         // A chat that runs into the daily limit ends gently when the minutes run out.
         clearTimeout(capTimer.current);
         if (minutesLeft !== null && minutesLeft !== undefined) {
@@ -130,7 +140,12 @@ export function useElevenLabsVoice(
     error,
     activeTool,
     start: (o) => void start(o),
-    stop: () => conversation.endSession(),
+    stop: () => {
+      cancelled.current = true;
+      setStarting(false);
+      clearTimeout(capTimer.current);
+      if (conversation.status === "connected" || conversation.status === "connecting") conversation.endSession();
+    },
     getVolume: () => (conversation.status === "connected" ? conversation.getOutputVolume() : 0),
   };
 }
