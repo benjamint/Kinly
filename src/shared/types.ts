@@ -1,6 +1,8 @@
 // Shared data model for one Kinly household. The same shape is used by the
 // elder screen, the family dashboard, the API, and the voice agent's tools.
 
+import type { RobotLook } from "./robotLook.js";
+
 export type Language = "en" | "sw";
 
 export interface ElderSettings {
@@ -25,6 +27,8 @@ export interface ElderSettings {
   exercisesEnabled?: boolean;
   /** Daily minutes of live (paid) voice for chatting; 0 or unset = no limit. Help and reminders are never limited. */
   voiceMinutesPerDay?: number;
+  /** Kinly's colours and accessory; unset parts use DEFAULT_LOOK (src/shared/robotLook.ts). */
+  robotLook?: Partial<RobotLook>;
 }
 
 export interface FamilyMember {

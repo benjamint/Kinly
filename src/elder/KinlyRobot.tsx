@@ -1,4 +1,5 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useId, useRef } from "react";
+import { resolveLook, shade, type Accessory, type RobotLook } from "../shared/robotLook";
 import type { Expression } from "./expression";
 
 // Kinly, a small friendly robot: a glossy white head with two black lens
@@ -63,9 +64,98 @@ interface RobotProps {
   expression: Expression;
   /** 0–1 loudness of Kinly's voice, polled every frame. */
   getVolume: () => number;
+  /** Colours and accessory; defaults from src/shared/robotLook.ts. */
+  look?: Partial<RobotLook>;
 }
 
-export function KinlyRobot({ expression, getVolume }: RobotProps) {
+const KENTE = ["#f2b632", "#2f7a3d", "#c0392b", "#1b1b1b"];
+
+/** Swag drawn on the body (under the head). */
+function BodyAccessory({ kind, accent }: { kind: Accessory; accent: string }) {
+  if (kind === "bowtie") {
+    return (
+      <g transform="translate(200 322)">
+        <path d="M -6 -2 L -34 -16 Q -40 0 -34 16 L -6 2 Z" fill={accent} />
+        <path d="M 6 -2 L 34 -16 Q 40 0 34 16 L 6 2 Z" fill={accent} />
+        <path d="M -30 -10 L -14 -3 M -30 10 L -14 3 M 30 -10 L 14 -3 M 30 10 L 14 3" stroke={shade(accent, -0.25)} strokeWidth="2" />
+        <rect x="-8" y="-9" width="16" height="18" rx="5" fill={shade(accent, -0.18)} />
+      </g>
+    );
+  }
+  if (kind === "kente") {
+    return (
+      <g>
+        {/* scarf band around the neck, striped like kente cloth */}
+        {KENTE.map((c, i) => (
+          <path key={i} d={`M ${141 + i} ${312 + i * 5} Q 200 ${334 + i * 5} ${259 - i} ${312 + i * 5}`} fill="none" stroke={c} strokeWidth="6" />
+        ))}
+        <g transform="translate(236 330) rotate(12)">
+          {KENTE.map((c, i) => (
+            <rect key={i} x="0" y={i * 13} width="22" height="13" fill={c} />
+          ))}
+          <path d="M 0 52 L 4 60 M 8 52 L 8 61 M 14 52 L 13 60 M 20 52 L 18 59" stroke="#f2b632" strokeWidth="2" />
+        </g>
+      </g>
+    );
+  }
+  if (kind === "beads") {
+    return (
+      <g>
+        {Array.from({ length: 13 }, (_, i) => {
+          const t = i / 12;
+          const x = 146 + t * 108;
+          const y = 314 + Math.sin(t * Math.PI) * 24;
+          return <circle key={i} cx={x} cy={y} r={i % 2 ? 5 : 6.5} fill={i % 2 ? "#f2b632" : accent} />;
+        })}
+      </g>
+    );
+  }
+  return null;
+}
+
+/** Swag drawn on the head. */
+function HeadAccessory({ kind, accent, shell }: { kind: Accessory; accent: string; shell: string }) {
+  if (kind === "kufi") {
+    return (
+      <g>
+        <path d="M 120 186 Q 122 142 200 140 Q 278 142 280 186 Q 200 176 120 186 Z" fill={accent} />
+        <path d="M 120 186 Q 200 176 280 186" fill="none" stroke={shade(accent, -0.25)} strokeWidth="4" />
+        {Array.from({ length: 9 }, (_, i) => (
+          <circle key={i} cx={136 + i * 16} cy={166 - Math.sin((i / 8) * Math.PI) * 12} r="2.6" fill={shade(accent, 0.55)} />
+        ))}
+      </g>
+    );
+  }
+  if (kind === "headphones") {
+    const dark = shade(accent, -0.35);
+    return (
+      <g>
+        <path d="M 104 220 Q 104 150 200 148 Q 296 150 296 220" fill="none" stroke={dark} strokeWidth="9" strokeLinecap="round" />
+        <rect x="88" y="200" width="26" height="54" rx="12" fill={accent} />
+        <rect x="286" y="200" width="26" height="54" rx="12" fill={accent} />
+        <rect x="94" y="208" width="8" height="38" rx="4" fill={shade(accent, 0.35)} />
+        <rect x="298" y="208" width="8" height="38" rx="4" fill={shade(accent, 0.35)} />
+      </g>
+    );
+  }
+  if (kind === "flower") {
+    return (
+      <g transform="translate(130 180)">
+        {Array.from({ length: 5 }, (_, i) => {
+          const a = (i / 5) * Math.PI * 2;
+          return <ellipse key={i} cx={Math.cos(a) * 11} cy={Math.sin(a) * 11} rx="11" ry="8" transform={`rotate(${(a * 180) / Math.PI} ${Math.cos(a) * 11} ${Math.sin(a) * 11})`} fill={accent} />;
+        })}
+        <circle r="7" fill="#f2c14e" stroke={shade(shell, -0.2)} strokeWidth="1" />
+      </g>
+    );
+  }
+  return null;
+}
+
+export function KinlyRobot({ expression, getVolume, look }: RobotProps) {
+  const L = resolveLook(look);
+  const uid = useId().replace(/:/g, "");
+  const id = (name: string) => `kr-${name}-${uid}`;
   const root = useRef<SVGSVGElement>(null);
   const state = useRef({ expression, getVolume });
   state.current = { expression, getVolume };
@@ -193,79 +283,81 @@ export function KinlyRobot({ expression, getVolume }: RobotProps) {
       aria-label="Kinly, your AI assistant"
     >
       <defs>
-        <radialGradient id="kr-shell" cx="38%" cy="30%" r="80%">
-          <stop offset="0%" stopColor="#ffffff" />
-          <stop offset="55%" stopColor="#f3f3f2" />
-          <stop offset="100%" stopColor="#d9d9d7" />
+        <radialGradient id={id("shell")} cx="38%" cy="30%" r="80%">
+          <stop offset="0%" stopColor={shade(L.shell, 0.75)} />
+          <stop offset="55%" stopColor={L.shell} />
+          <stop offset="100%" stopColor={shade(L.shell, -0.12)} />
         </radialGradient>
-        <radialGradient id="kr-body" cx="35%" cy="25%" r="85%">
-          <stop offset="0%" stopColor="#ffffff" />
-          <stop offset="60%" stopColor="#efefed" />
-          <stop offset="100%" stopColor="#cfcfcc" />
+        <radialGradient id={id("body")} cx="35%" cy="25%" r="85%">
+          <stop offset="0%" stopColor={shade(L.shell, 0.75)} />
+          <stop offset="60%" stopColor={shade(L.shell, -0.02)} />
+          <stop offset="100%" stopColor={shade(L.shell, -0.16)} />
         </radialGradient>
-        <radialGradient id="kr-lens" cx="40%" cy="35%" r="70%">
-          <stop offset="0%" stopColor="#3a3a3c" />
-          <stop offset="60%" stopColor="#141416" />
-          <stop offset="100%" stopColor="#050506" />
+        <radialGradient id={id("lens")} cx="40%" cy="35%" r="70%">
+          <stop offset="0%" stopColor={shade(L.eyes, 0.2)} />
+          <stop offset="60%" stopColor={L.eyes} />
+          <stop offset="100%" stopColor={shade(L.eyes, -0.7)} />
         </radialGradient>
-        <radialGradient id="kr-shadow">
+        <radialGradient id={id("shadow")}>
           <stop offset="0%" stopColor="rgba(0,0,0,0.22)" />
           <stop offset="100%" stopColor="rgba(0,0,0,0)" />
         </radialGradient>
-        <clipPath id="kr-eye-clip">
+        <clipPath id={id("eye-clip")}>
           <circle cx="0" cy="0" r={LENS_R + 4.5} />
         </clipPath>
       </defs>
 
-      <ellipse className="kr__shadow" cx="200" cy="492" rx="108" ry="16" fill="url(#kr-shadow)" />
+      <ellipse className="kr__shadow" cx="200" cy="492" rx="108" ry="16" fill={`url(#${id("shadow")})`} />
 
       <g className="kr__body">
-        {/* base: a soft black disc */}
-        <ellipse cx="200" cy="466" rx="72" ry="18" fill="#141414" />
+        {/* base: a soft disc */}
+        <ellipse cx="200" cy="466" rx="72" ry="18" fill={L.trim} />
         {/* egg body, opening at the top where the head sits */}
         <path
           d="M 142 300 C 122 330 112 372 116 412 C 119 446 148 462 200 462 C 252 462 281 446 284 412 C 288 372 278 330 258 300 Z"
-          fill="url(#kr-body)"
+          fill={`url(#${id("body")})`}
         />
-        <ellipse cx="200" cy="300" rx="58" ry="11" fill="#d5d4d1" />
-        <ellipse cx="200" cy="302" rx="50" ry="8" fill="#b9b8b5" />
+        <ellipse cx="200" cy="300" rx="58" ry="11" fill={shade(L.shell, -0.13)} />
+        <ellipse cx="200" cy="302" rx="50" ry="8" fill={shade(L.shell, -0.25)} />
         <path d="M 120 420 Q 200 446 280 420" fill="none" stroke="rgba(0,0,0,0.07)" strokeWidth="2" />
+        <BodyAccessory kind={L.accessory} accent={L.accent} />
       </g>
 
       <g className="kr__head">
-       <g transform="translate(0 9)">
-        {[0, 1].map((i) => (
-          <g key={i} className={`kr__ant kr__ant--${i}`} transform={`translate(${i ? 248 : 152} 172)`}>
-            <path d={antenna} fill="none" stroke="#1c1c1c" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-            <rect x="-3" y="-148" width="6" height="16" rx="3" fill="#1c1c1c" />
-          </g>
-        ))}
-        <rect x="108" y="168" width="184" height="126" rx="36" fill="url(#kr-shell)" />
-        {/* side panel shading for depth */}
-        <path d="M 270 172 Q 292 176 292 204 L 292 258 Q 292 290 266 293 Q 284 270 284 232 Q 284 190 270 172 Z" fill="rgba(0,0,0,0.05)" />
-        <g className="kr__eyes">
-          <rect x="182" y="226" width="36" height="7" rx="3.5" fill="#111" />
+        <g transform="translate(0 9)">
           {[0, 1].map((i) => (
-            <g key={i} className={`kr__eye kr__eye--${i}`}>
-              <g className="kr__lens" transform={`translate(${EYES[i]} ${EYE_Y})`}>
-                <circle r={LENS_R + 4} fill="#0c0c0d" />
-                <circle r={LENS_R - 3} fill="url(#kr-lens)" />
-                <circle r={LENS_R - 9} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="2" />
-                <g className="kr__glint">
-                  <circle cx="-7" cy="-8" r="4.5" fill="rgba(255,255,255,0.9)" />
-                  <circle cx="6" cy="6" r="2" fill="rgba(255,255,255,0.45)" />
-                </g>
-                {/* eyelid in the shell colour slides down over the eye */}
-                <g clipPath="url(#kr-eye-clip)">
-                  <rect className="kr__lid" x={-LENS_R - 6} y={-LENS_R - 6} width={LENS_R * 2 + 12} height="0" fill="#eeeeec" />
-                </g>
-                {/* the closed eye: a soft downward curve */}
-                <path className="kr__closed" d={`M ${-LENS_R + 2} 2 Q 0 ${LENS_R * 0.55} ${LENS_R - 2} 2`} fill="none" stroke="#141414" strokeWidth="5" strokeLinecap="round" opacity="0" />
-              </g>
+            <g key={i} className={`kr__ant kr__ant--${i}`} transform={`translate(${i ? 248 : 152} 172)`}>
+              <path d={antenna} fill="none" stroke={L.trim} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+              <rect x="-3" y="-148" width="6" height="16" rx="3" fill={L.trim} />
             </g>
           ))}
+          <rect x="108" y="168" width="184" height="126" rx="36" fill={`url(#${id("shell")})`} />
+          {/* side panel shading for depth */}
+          <path d="M 270 172 Q 292 176 292 204 L 292 258 Q 292 290 266 293 Q 284 270 284 232 Q 284 190 270 172 Z" fill="rgba(0,0,0,0.05)" />
+          <HeadAccessory kind={L.accessory} accent={L.accent} shell={L.shell} />
+          <g className="kr__eyes">
+            <rect x="182" y="226" width="36" height="7" rx="3.5" fill={shade(L.eyes, -0.2)} />
+            {[0, 1].map((i) => (
+              <g key={i} className={`kr__eye kr__eye--${i}`}>
+                <g className="kr__lens" transform={`translate(${EYES[i]} ${EYE_Y})`}>
+                  <circle r={LENS_R + 4} fill={shade(L.eyes, -0.35)} />
+                  <circle r={LENS_R - 3} fill={`url(#${id("lens")})`} />
+                  <circle r={LENS_R - 9} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="2" />
+                  <g className="kr__glint">
+                    <circle cx="-7" cy="-8" r="4.5" fill="rgba(255,255,255,0.9)" />
+                    <circle cx="6" cy="6" r="2" fill="rgba(255,255,255,0.45)" />
+                  </g>
+                  {/* eyelid in the shell colour slides down over the eye */}
+                  <g clipPath={`url(#${id("eye-clip")})`}>
+                    <rect className="kr__lid" x={-LENS_R - 6} y={-LENS_R - 6} width={LENS_R * 2 + 12} height="0" fill={shade(L.shell, 0.15)} />
+                  </g>
+                  {/* the closed eye: a soft downward curve */}
+                  <path className="kr__closed" d={`M ${-LENS_R + 2} 2 Q 0 ${LENS_R * 0.55} ${LENS_R - 2} 2`} fill="none" stroke={L.eyes} strokeWidth="5" strokeLinecap="round" opacity="0" />
+                </g>
+              </g>
+            ))}
+          </g>
         </g>
-       </g>
       </g>
     </svg>
   );

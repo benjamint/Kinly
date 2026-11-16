@@ -6,6 +6,7 @@ import type { Household, Language, Reminder, ReminderKind } from "../shared/type
 import { timeAgo } from "../elder/Sheets";
 import { AlertsCard } from "./AlertsCard";
 import { ActivitiesCard, ComingUpCard, EngagementSettings } from "./EngagementCards";
+import { LookCard } from "./LookCard";
 
 const ME_KEY = "kinly.familyMe";
 
@@ -146,6 +147,7 @@ function DashboardView({
 
       <VoiceCard />
       <ReminderEditor household={household} dispatch={dispatch} />
+      <LookCard household={household} dispatch={dispatch} />
       <EngagementSettings household={household} dispatch={dispatch} />
       <SettingsCard household={household} dispatch={dispatch} />
       <p className="dash__foot">
