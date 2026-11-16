@@ -66,6 +66,9 @@ const ICONS = {
   stop: (
     <svg viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2" /></svg>
   ),
+  settings: (
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" /><path d="M12 2.8v2.6M12 18.6v2.6M2.8 12h2.6M18.6 12h2.6M5.5 5.5l1.8 1.8M16.7 16.7l1.8 1.8M5.5 18.5l1.8-1.8M16.7 7.3l1.8-1.8" /><circle cx="12" cy="12" r="6.4" /></svg>
+  ),
 };
 
 function useNow(intervalMs = 15_000) {
@@ -216,9 +219,17 @@ export function ElderScreen() {
         <div className="elder__badges">
           <span className="chip chip--ai">Kinly · AI assistant</span>
           {(!live || capUsed) && (
-            <span className="chip">{live ? "Practice voice · minutes used" : "Practice voice"}</span>
+            <span className="chip chip--extra">{live ? "Practice voice · minutes used" : "Practice voice"}</span>
           )}
         </div>
+        <button
+          className="icon-btn"
+          onClick={() => { voice.stop(); setSheet("settings"); }}
+          aria-label={sw ? "Mipangilio" : "Settings"}
+          title={sw ? "Mipangilio" : "Settings"}
+        >
+          <span aria-hidden="true">{ICONS.settings}</span>
+        </button>
       </header>
 
       <div className="elder__hello" aria-hidden="true">

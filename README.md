@@ -8,7 +8,7 @@ A warm, full-screen talking face for older adults, with a family dashboard behin
 
 ## Signing in
 
-Every device signs in to a household with its **household code and PIN**. The sign-in screen is always the first thing shown. After that the device stays signed in until someone chooses **Sign out** in Settings (on the elder's screen, press and hold the clock for 2 seconds). If the PIN changes, devices are sent back to sign-in.
+Every device signs in to a household with its **household code and PIN**. The sign-in screen is always the first thing shown. After that the device stays signed in until someone chooses **Sign out** in Settings (on the elder's screen, tap the gear icon at the top right). If the PIN changes, devices are sent back to sign-in.
 
 ## Running it
 
@@ -38,7 +38,7 @@ To change Kinly's personality or tools later, edit `agent/prompt.ts` or `agent/t
 
 ## Kinly's look
 
-Families change Kinly's colours and accessories ("swag": bow tie, kente scarf, headphones, kufi cap, flower, beads) on the dashboard under **Kinly's look**, with a live preview; it's saved for the whole household. The defaults, colour presets and accessory list live in `src/shared/robotLook.ts` (change `DEFAULT_LOOK` to change Kinly for everyone); accessories are drawn in `src/elder/KinlyRobot.tsx`.
+Kinly's colours and accessories ("swag": bow tie, kente scarf, headphones, kufi cap, flower, beads) can be changed on the dashboard under **Kinly's look**, or right on the elder's screen from the **gear icon** (top right), which also holds how Kinly talks (language, speed, words on screen). Both have a live preview; it's saved for the whole household. The defaults, colour presets and accessory list live in `src/shared/robotLook.ts` (change `DEFAULT_LOOK` to change Kinly for everyone); accessories are drawn in `src/elder/KinlyRobot.tsx`.
 
 ## Keeping voice costs down
 

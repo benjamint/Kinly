@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useHousehold } from "../lib/household-context";
 import { localClock, todaysReminders, unreadFamilyMessages } from "../shared/household";
 import type { Household, Language } from "../shared/types";
+import { LookCard } from "../family/LookCard";
 
 export function Sheet({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
@@ -142,6 +143,7 @@ export function SettingsSheet({ household, onClose }: { household: Household; on
   const set = (patch: Partial<typeof e>) => void dispatch({ type: "updateElder", patch });
   return (
     <Sheet title="Settings" onClose={onClose}>
+      <h2 className="settings__h">How Kinly talks</h2>
       <fieldset className="choice">
         <legend>Language</legend>
         {LANGUAGES.map((l) => (
@@ -174,6 +176,7 @@ export function SettingsSheet({ household, onClose }: { household: Household; on
           </button>
         ))}
       </fieldset>
+      <LookCard household={household} dispatch={dispatch} />
       <div className="settings__links">
         <Link className="small-button" to="/family">
           Open family dashboard

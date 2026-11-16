@@ -187,6 +187,7 @@ button {
 }
 
 .elder__top {
+  min-width: 0;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -219,6 +220,66 @@ button {
   flex-direction: column;
   align-items: flex-end;
   gap: 8px;
+  margin-left: auto;
+}
+
+/* settings (gear) button, top right */
+.icon-btn {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: none;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+  cursor: pointer;
+}
+
+.icon-btn svg {
+  width: 26px;
+  height: 26px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+}
+
+.icon-btn:active {
+  transform: scale(0.94);
+}
+
+/* small phones: the gear sits above the AI chip so nothing runs off the edge */
+@media (max-width: 380px) {
+  .chip--extra {
+    display: none;
+  }
+  .elder__top {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 8px;
+    row-gap: 8px;
+  }
+  .elder__top .clock {
+    grid-row: 1 / span 2;
+  }
+  .elder__top .icon-btn {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+    width: 46px;
+    height: 46px;
+  }
+  .elder__badges {
+    grid-column: 2;
+    grid-row: 2;
+  }
+  .elder__badges .chip {
+    font-size: 12.5px;
+    padding: 6px 11px;
+  }
 }
 
 /* greeting */
@@ -1836,6 +1897,22 @@ button {
 
 .look .form__actions {
   margin-top: 20px;
+}
+
+/* Kinly's look inside the elder Settings sheet */
+.settings__h {
+  margin: 4px 0 0;
+  font-size: clamp(22px, 5vw, 28px);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.sheet__body .look {
+  font-size: 17px;
+}
+
+.sheet__body .look .look__preview {
+  max-height: 260px;
 }
 
 .look .btn:disabled {
