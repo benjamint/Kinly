@@ -9,6 +9,7 @@ import type { Game, Household } from "../shared/types";
 import { ActivitiesSheet, ActivityScreen } from "./activities/Activities";
 import type { Expression } from "./expression";
 import { KinlyRobot } from "./KinlyRobot";
+import { VitalsRow } from "./Vitals";
 import { HelpButton, HelpOverlay } from "./Help";
 import { FamilySheet, RemindersSheet, SettingsSheet } from "./Sheets";
 import { stayAwake } from "./sound";
@@ -65,6 +66,9 @@ const ICONS = {
   ),
   stop: (
     <svg viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2" /></svg>
+  ),
+  arrow: (
+    <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
   ),
   settings: (
     <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" /><path d="M12 2.8v2.6M12 18.6v2.6M2.8 12h2.6M18.6 12h2.6M5.5 5.5l1.8 1.8M16.7 16.7l1.8 1.8M5.5 18.5l1.8-1.8M16.7 7.3l1.8-1.8" /><circle cx="12" cy="12" r="6.4" /></svg>
@@ -129,6 +133,16 @@ export function ElderScreen() {
       liveVoice.stop();
       demoVoice.stop();
     },
+    send: (text: string) => {
+      if (live && !capUsed) {
+        setEngine("live");
+        liveVoice.send(text);
+      } else {
+        if (live) liveVoice.stop();
+        setEngine("free");
+        demoVoice.send(text);
+      }
+    },
     start: (options: StartOptions = {}) => {
       const essential = options.purpose === "help" || options.purpose === "reminder";
       if (live && (essential || !capUsed)) {
@@ -144,6 +158,8 @@ export function ElderScreen() {
   const [sheet, setSheet] = useState<Sheet>(null);
   const [activity, setActivity] = useState<Game | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [typing, setTyping] = useState(false);
+  const [typed, setTyped] = useState("");
   const now = useNow();
   const busy = voice.state !== "idle" && voice.state !== "error";
 
@@ -166,6 +182,14 @@ export function ElderScreen() {
     if (busy) setShowCaption(true);
     else captionTimer.current = setTimeout(() => setShowCaption(false), 8000);
   }, [busy, voice.caption]);
+
+  // On phones the conversation card sits below Kinly: bring it into view when talking starts.
+  const saidRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (busy && window.innerWidth < 700 && !(window.innerWidth > window.innerHeight)) {
+      saidRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+    }
+  }, [busy]);
 
   const expression: Expression = useMemo(() => {
     if (helpOpen || voice.activeTool === "raise_alert") return "concerned";
@@ -212,12 +236,41 @@ export function ElderScreen() {
     ? `${minutes < 720 ? "Habari za asubuhi" : minutes < 1020 ? "Habari za mchana" : "Habari za jioni"}, ${household.elder.name}.`
     : `Good ${minutes < 720 ? "morning" : minutes < 1020 ? "afternoon" : "evening"}, ${household.elder.name}.`;
 
+  const status = busy
+    ? voice.state === "listening"
+      ? sw ? "Ninasikiliza…" : "Listening…"
+      : voice.state === "speaking"
+        ? sw ? "Kinly anaongea" : "Kinly is speaking"
+        : voice.state === "thinking"
+          ? sw ? "Anafikiri…" : "Thinking…"
+          : sw ? "Anaunganisha…" : "Connecting…"
+    : expression === "sleeping"
+      ? sw ? "Anapumzika" : "Resting"
+      : sw ? "Niko tayari ukiwa tayari" : "Ready when you are";
+  const stateTag = busy ? (sw ? "Ameunganishwa" : "Connected") : expression === "sleeping" ? (sw ? "Anapumzika" : "Resting") : sw ? "Tayari" : "Ready";
+  const name = household.elder.name;
+  const [hello] = greeting.split(",");
+  const kinlyLine =
+    (chat && voice.caption) ||
+    (sw ? `Habari ${name}. Unajisikiaje leo?` : `Hello ${name}. How are you feeling today?`);
+  const sendTyped = (e: React.FormEvent) => {
+    e.preventDefault();
+    const text = typed.trim();
+    if (!text) return;
+    void stayAwake();
+    setTyped("");
+    voice.send(text);
+  };
+
   return (
-    <main className={`elder elder--${expression}`}>
+    <main className={`elder elder--${expression}${busy ? " elder--busy" : ""}`}>
       <header className="elder__top">
         <Clock household={household} now={now} onLongPress={() => setSheet("settings")} />
         <div className="elder__badges">
-          <span className="chip chip--ai">Kinly · AI assistant</span>
+          <span className={`presence${busy ? " presence--on" : ""}`}>
+            <i aria-hidden="true" />
+            {busy ? status : sw ? "Kinly yupo" : "Kinly is here"}
+          </span>
           {(!live || capUsed) && (
             <span className="chip chip--extra">{live ? "Practice voice · minutes used" : "Practice voice"}</span>
           )}
@@ -232,78 +285,131 @@ export function ElderScreen() {
         </button>
       </header>
 
-      <div className="elder__hello" aria-hidden="true">
-        <span className="eyebrow">{sw ? "Kinly · msaidizi wako" : "Kinly · your companion"}</span>
-        <h2 className="display">{greeting}</h2>
-        <p className="lead">
-          <strong>{sw ? "Ongea tu." : "Just talk."}</strong>{" "}
-          {sw ? "Gusa kitufe cha machungwa." : "Tap the orange button."}
-        </p>
-      </div>
-
-      <nav className="toolbar" aria-label="Kinly tools">
-        <button className="tool tool--family" onClick={() => setSheet("family")}>
-          <span className="tool__icon" aria-hidden="true">{ICONS.family}</span>
-          <span className="tool__label">{sw ? "Familia" : "Family"}</span>
-          {unread > 0 && <span className="tool__count" aria-label={`${unread} new`}>{unread}</span>}
-        </button>
-        <button className="tool tool--reminders" onClick={() => setSheet("reminders")}>
-          <span className="tool__icon" aria-hidden="true">{ICONS.reminders}</span>
-          <span className="tool__label">{sw ? "Vikumbusho" : "Reminders"}</span>
-          {due > 0 && <span className="tool__count" aria-label={`${due} due now`}>{due}</span>}
-        </button>
-        <button className="tool tool--activities" onClick={() => { voice.stop(); setSheet("activities"); }}>
-          <span className="tool__icon" aria-hidden="true">{ICONS.activities}</span>
-          <span className="tool__label">{sw ? "Michezo" : "Activities"}</span>
-        </button>
-        <HelpButton
-          onHelp={() => {
-            setSheet(null);
-            setHelpOpen(true);
-            void dispatch({ type: "raiseAlert", source: "button", reason: "Pressed the Help button." });
-            // Kinly's own voice tells them help is coming, then stays and talks with them.
-            setActivity(null);
-            voice.start({
-              purpose: "help",
-              firstMessage: helpLine(household, familyNames),
-              context:
-                `${household.elder.name} just pressed the Help button. ${familyNames} have ALREADY been alerted, ` +
-                "so do not call raise_alert again unless something new and serious happens. Stay with them: keep them " +
-                "calm, ask simply how they are and what happened, and if it sounds serious tell them to call emergency services.",
-            });
-          }}
-        />
-      </nav>
-
       <section className="elder__stage">
+        <span className="stage__eyebrow eyebrow">{sw ? "Muda wako" : "A moment for you"}</span>
+        <div className="stage__rings" aria-hidden="true">
+          <i /><i /><i />
+        </div>
         <button className="elder__robot" onClick={onFaceTap} aria-label={hint}>
           <KinlyRobot expression={expression} getVolume={voice.getVolume} look={household.elder.robotLook} />
         </button>
+        <VitalsRow household={household} now={now} where="stage" />
+        <p className="stage__tag"><span className="o-dash" aria-hidden="true" />{sw ? "Niko hapa wakati wowote" : "Here, whenever you need"}</p>
+        <footer className="stage__foot">
+          <span className="mini-kinly" aria-hidden="true"><i /><i /></span>
+          <span className="stage__who">
+            <strong>Kinly</strong>
+            <small>{sw ? "Msaidizi wako wa AI" : "Your AI companion"}</small>
+          </span>
+          <span className={`stage__state${busy ? " stage__state--on" : ""}`}>{stateTag}</span>
+        </footer>
       </section>
 
-      <div className="chat" aria-live="polite">
-        {chat && voice.heard && <p className="bubble bubble--me">{voice.heard}</p>}
-        {chat && voice.caption && (
-          <div className={`bubble-row${expression === "speaking" ? " bubble-row--speaking" : ""}`}>
-            <span className="wave" aria-hidden="true">
-              <i /><i /><i /><i /><i />
+      <div className="elder__side">
+        <div className="elder__hello">
+          <span className="eyebrow eyebrow--dash"><span className="o-dash" aria-hidden="true" />{sw ? "Nafasi yako, mwendo wako" : "Your space, your pace"}</span>
+          <h2 className="display">
+            {hello},<br />
+            <span className="display__name">{name}.</span>
+          </h2>
+          <p className="lead">{sw ? "Njia laini ya kukaa karibu." : "A softer way to stay connected."}</p>
+        </div>
+
+        <VitalsRow household={household} now={now} where="side" />
+
+        <div className="mind">
+          <p className="mind__label"><span className="eyebrow">{sw ? "Akilini mwako" : "On your mind"}</span><span className="mind__rule" /><span>{sw ? "Pa kuanzia" : "A place to begin"}</span></p>
+          <nav className="toolbar" aria-label="Kinly tools">
+            <button className="tool tool--family" onClick={() => setSheet("family")}>
+              <span className="tool__icon" aria-hidden="true">{ICONS.family}</span>
+              <span className="tool__label">{sw ? "Familia" : "Family"}</span>
+              {unread > 0 && <span className="tool__count" aria-label={`${unread} new`}>{unread}</span>}
+            </button>
+            <button className="tool tool--reminders" onClick={() => setSheet("reminders")}>
+              <span className="tool__icon" aria-hidden="true">{ICONS.reminders}</span>
+              <span className="tool__label">{sw ? "Vikumbusho" : "Reminders"}</span>
+              {due > 0 && <span className="tool__count" aria-label={`${due} due now`}>{due}</span>}
+            </button>
+            <button className="tool tool--activities" onClick={() => { voice.stop(); setSheet("activities"); }}>
+              <span className="tool__icon" aria-hidden="true">{ICONS.activities}</span>
+              <span className="tool__label">{sw ? "Michezo" : "Activities"}</span>
+            </button>
+            <HelpButton
+              onHelp={() => {
+                setSheet(null);
+                setHelpOpen(true);
+                void dispatch({ type: "raiseAlert", source: "button", reason: "Pressed the Help button." });
+                // Kinly's own voice tells them help is coming, then stays and talks with them.
+                setActivity(null);
+                voice.start({
+                  purpose: "help",
+                  firstMessage: helpLine(household, familyNames),
+                  context:
+                    `${household.elder.name} just pressed the Help button. ${familyNames} have ALREADY been alerted, ` +
+                    "so do not call raise_alert again unless something new and serious happens. Stay with them: keep them " +
+                    "calm, ask simply how they are and what happened, and if it sounds serious tell them to call emergency services.",
+                });
+              }}
+            />
+          </nav>
+        </div>
+
+        <article ref={saidRef} className={`said${expression === "speaking" ? " said--speaking" : ""}`} aria-live="polite">
+          <header className="said__head">
+            <span className="mini-kinly" aria-hidden="true"><i /><i /></span>
+            <strong>Kinly</strong>
+            <span className="said__when">{sw ? "Sasa hivi" : "Just now"}</span>
+            <span className="wave" aria-hidden="true"><i /><i /><i /><i /><i /></span>
+          </header>
+          <p className="said__text" style={{ fontSize: `calc(var(--said-size) * ${household.elder.captionScale})` }}>
+            {kinlyLine}
+          </p>
+          <p className="said__foot">
+            {chat && voice.heard ? (
+              <><span className="said__you">{sw ? "Wewe:" : "You:"}</span> {voice.heard}</>
+            ) : (
+              <><span className="star" aria-hidden="true">✳</span> {sw ? "Hakuna haraka. Niko hapa." : "No rush. I'm right here."}</>
+            )}
+          </p>
+        </article>
+
+        <div className="talk-dock">
+          <p className={`talk-status${busy ? " talk-status--on" : ""}`}><i aria-hidden="true" />{status}</p>
+          <button className={`talk${busy ? " talk--on" : ""}`} onClick={onFaceTap} title={hint}>
+            <span className="talk__icon" aria-hidden="true">{busy ? ICONS.stop : ICONS.mic}</span>
+            <span className="talk__text">
+              <strong>{busy ? (sw ? "Acha kuongea" : "Stop talking") : sw ? "Tuongee" : "Let's talk"}</strong>
+              <small>{busy ? (sw ? "Gusa kumaliza" : "Tap to finish") : sw ? "Gusa mara moja, kisha ongea tu" : "Tap once, then just speak"}</small>
             </span>
-            <p className="bubble bubble--kinly" style={{ fontSize: `calc(var(--bubble-size) * ${household.elder.captionScale})` }}>
-              {voice.caption}
-            </p>
-          </div>
-        )}
+            <span className="talk__arrow" aria-hidden="true">{ICONS.arrow}</span>
+          </button>
+        </div>
+
+        <div className="type">
+          {typing ? (
+            <form className="type__form" onSubmit={sendTyped}>
+              <input
+                autoFocus
+                value={typed}
+                onChange={(e) => setTyped(e.target.value)}
+                placeholder={sw ? "Andika kwa Kinly…" : "Write to Kinly…"}
+                aria-label={sw ? "Andika kwa Kinly" : "Write to Kinly"}
+                enterKeyHint="send"
+              />
+              <button className="type__send" type="submit" disabled={!typed.trim()}>{sw ? "Tuma" : "Send"}</button>
+              <button className="type__close" type="button" onClick={() => setTyping(false)} aria-label={sw ? "Funga" : "Close"}>×</button>
+            </form>
+          ) : (
+            <button className="type__link" onClick={() => setTyping(true)}>{sw ? "Au andika badala yake" : "Or type instead"}</button>
+          )}
+        </div>
       </div>
 
-      <button
-        className={`fab${busy ? " fab--on" : ""}`}
-        onClick={onFaceTap}
-        aria-label={busy ? (sw ? "Acha kuongea" : "Stop talking") : sw ? "Ongea na Kinly" : "Talk to Kinly"}
-        title={hint}
-      >
-        <span className="fab__icon" aria-hidden="true">{busy ? ICONS.stop : ICONS.mic}</span>
-      </button>
-
+      <footer className="elder__foot" aria-hidden="true">
+        <span>Made for the moments that matter</span>
+        <span className="star">✳</span>
+        <span>Kinly · {new Date().getFullYear()}</span>
+      </footer>
 
       {sheet === "family" && (
         <FamilySheet

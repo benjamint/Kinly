@@ -2,7 +2,8 @@
 
 A warm, full-screen talking face for older adults, with a family dashboard behind it. It's the first prototype for the [Kinly PRD](#how-this-maps-to-the-prd) (voice, language and access).
 
-- **Elder screen (`/`)**: Kinly's face fills the screen. Tap the face to talk. Three big buttons: **Family** (hear messages, send one by voice), **Reminders** (today's medication and meals, "I've taken it"), **Help** (press and hold to alert the family).
+- **Elder screen (`/`)**: Kinly stands on a calm stage (on the left on tablets and computers). Next to it are the greeting, four tools (**Family**: hear messages and send one by voice; **Reminders**: today's medicines and meals, "I've taken it"; **Activities**; **Help**: press and hold to alert the family), Kinly's last words, and a big **Let's talk** button. **Or type instead** sends typed words to Kinly, who answers out loud. The gear (top right) opens Settings.
+- **Health readings (simulated)**: heart rate, blood pressure and blood sugar on the elder screen and the dashboard. They are **demo data** (`src/shared/vitals.ts`), worked out from the household and the time so every screen agrees, clearly labelled as simulated, and never sent to the voice agent. A real monitor can replace them later.
 - **Activities** (free, no AI voice minutes): a Today board (day, date, weather, today's plan, what's coming up), brain games (matching pairs with local foods, finish the proverb, drum memory, market maths) that adapt their difficulty and never mark anything "wrong", and gentle chair exercises with spoken counting. They speak with the phone's own voice, so they cost nothing per use.
 - **Family dashboard (`/family`)**: see alerts and today's reminder status, send messages that Kinly reads aloud, read the elder's spoken replies, set reminders, quiet hours, language and the family circle.
 

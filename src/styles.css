@@ -4,13 +4,13 @@
    bubbles for conversation. Sizes stay large: this is for older eyes. */
 
 :root {
-  --bg: #f6f6f5;
+  --bg: #f5f3ef;
   --surface: #ffffff;
   --ink: #141414;
   --muted: #6b6b69; /* body-size grey, 4.9:1 on --bg */
   --faint: #8a8a88; /* large text only */
-  --line: #e7e6e3;
-  --soft: #efeeec;
+  --line: #e6e2dc;
+  --soft: #eeebe6;
   --orange-1: #e8690f;
   --orange-2: #d2530a;
   --orange: linear-gradient(135deg, var(--orange-1), var(--orange-2));
@@ -172,19 +172,39 @@ button {
 }
 
 /* ---------- elder screen ---------- */
+/* Phones: one scrolling column with the "Let's talk" card pinned to the bottom.
+   Tablets held sideways and desktops: Kinly on a stage on the left, the
+   greeting, readings, tools and conversation on the right. */
 
 .elder {
+  --said-size: clamp(21px, 4.6vw, 28px);
   position: relative;
   height: 100dvh;
-  overflow: hidden;
-  display: grid;
-  grid-template-rows: auto auto auto minmax(0, 1fr);
-  gap: 14px;
-  padding: max(16px, env(safe-area-inset-top)) 18px max(16px, env(safe-area-inset-bottom));
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: max(16px, env(safe-area-inset-top)) 18px calc(150px + env(safe-area-inset-bottom));
   background: var(--bg);
   transition: background 1.2s ease, color 1.2s ease;
   user-select: none;
 }
+
+.elder__side {
+  display: contents;
+}
+
+/* phones: Help and the other tools come straight after the greeting */
+.elder__top { order: 0; }
+.elder__hello { order: 1; }
+.mind { order: 2; }
+.elder__stage { order: 3; }
+.said { order: 4; }
+.vitals { order: 5; }
+.type { order: 6; }
+.elder__foot { order: 7; }
 
 .elder__top {
   min-width: 0;
@@ -194,6 +214,7 @@ button {
   gap: 12px;
   position: relative;
   z-index: 2;
+  flex: none;
 }
 
 .clock {
@@ -282,39 +303,124 @@ button {
   }
 }
 
-/* greeting */
-.elder__hello {
-  grid-row: 2;
-  grid-column: 1;
+.presence {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 4px;
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
+.presence i,
+.talk-status i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #6fa36f;
+  box-shadow: 0 0 0 4px rgba(111, 163, 111, 0.18);
+}
+
+.presence--on i,
+.talk-status--on i {
+  background: var(--orange-1);
+  box-shadow: 0 0 0 4px rgba(232, 105, 15, 0.2);
+  animation: blink 1.4s ease-in-out infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.o-dash {
+  display: inline-block;
+  width: 26px;
+  height: 2px;
+  margin-right: 12px;
+  vertical-align: middle;
+  background: var(--orange-1);
+  border-radius: 2px;
+}
+
+/* greeting */
 .elder__hello .eyebrow {
-  display: none;
+  display: inline-flex;
+  align-items: center;
+  font-size: 12.5px;
 }
 
 .elder__hello .display {
-  margin: 0 0 6px;
-  font-size: clamp(32px, 8.4vw, 72px);
+  margin: 10px 0 10px;
+  font-size: clamp(38px, 10.5vw, 64px);
+  letter-spacing: -0.055em;
+}
+
+.display__name {
+  color: #8f8c86;
 }
 
 .elder__hello .lead {
-  font-size: clamp(17px, 4.2vw, 24px);
+  font-size: clamp(17px, 4.4vw, 22px);
 }
 
-/* the robot fills what's left; chat bubbles sit over its lower part */
+/* the stage: Kinly in soft rings */
 .elder__stage {
-  grid-row: 4;
-  grid-column: 1;
   position: relative;
-  min-height: 0;
+  flex: none;
+  height: clamp(280px, 46vh, 460px);
+  container-type: size;
+  display: flex;
+  flex-direction: column;
+}
+
+.stage__rings {
+  position: absolute;
+  inset: 0 0 56px;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.stage__rings i {
+  grid-area: 1 / 1;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+}
+
+.stage__rings i:nth-child(1) { width: 92cqmin; height: 92cqmin; }
+.stage__rings i:nth-child(2) { width: 72cqmin; height: 72cqmin; border-style: dashed; opacity: 0.8; }
+.stage__rings i:nth-child(3) {
+  width: 52cqmin;
+  height: 52cqmin;
+  border: none;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0) 70%);
+}
+
+.stage__eyebrow,
+.stage__tag,
+.vitals--stage {
+  display: none;
+}
+
+.stage__tag {
+  margin: 0;
+  font-size: 16px;
+  color: var(--muted);
+  align-items: center;
 }
 
 .elder__robot {
   all: unset;
-  position: absolute;
-  inset: 0;
+  position: relative;
+  flex: 1;
+  min-height: 0;
   cursor: pointer;
   border-radius: 32px;
+  display: flex;
+  justify-content: center;
 }
 
 .elder__robot:focus-visible {
@@ -328,198 +434,103 @@ button {
   transition: filter 1.2s ease;
 }
 
-.chat {
-  grid-row: 4;
-  grid-column: 1;
-  align-self: end;
-  position: relative;
+.stage__foot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.stage__who {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  /* sit above the floating talk button */
-  padding-bottom: 96px;
-  pointer-events: none;
-  z-index: 2;
+  line-height: 1.2;
 }
 
-.bubble {
-  margin: 0;
-  max-width: min(100%, 560px);
-  padding: 14px 20px;
-  border-radius: 22px;
-  line-height: 1.35;
-  animation: pop 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+.stage__who strong {
+  font-size: 17px;
 }
 
-.bubble--me {
-  align-self: flex-end;
-  background: var(--ink);
-  color: #fff;
-  font-size: clamp(18px, 3.8vw, 22px);
+.stage__who small {
+  font-size: 14px;
+  color: var(--muted);
 }
 
-.bubble-row {
-  display: flex;
-  align-items: flex-end;
-  gap: 10px;
+.stage__state {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #4f7f4f;
 }
 
-.bubble--kinly {
-  background: var(--surface);
-  box-shadow: var(--shadow-lg);
-  font-size: var(--bubble-size);
-  font-weight: 500;
-  display: -webkit-box;
-  -webkit-line-clamp: 5;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-@keyframes pop {
-  from {
-    opacity: 0;
-    transform: translateY(10px) scale(0.97);
-  }
-}
-
-/* voice badge: a small black circle with a waveform that moves while speaking */
-.wave {
-  flex: none;
-  width: 44px;
-  height: 44px;
+.stage__state::before {
+  content: "";
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  background: var(--ink);
+  background: currentColor;
+}
+
+.stage__state--on {
+  color: var(--orange-2);
+}
+
+/* a tiny Kinly face: two dots in a soft circle */
+.mini-kinly {
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--surface);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 2.5px;
+  gap: 6px;
 }
 
-.wave i {
-  width: 3px;
-  height: 8px;
-  border-radius: 2px;
-  background: #fff;
-}
-
-.wave i:nth-child(2),
-.wave i:nth-child(4) {
-  height: 14px;
-}
-
-.wave i:nth-child(3) {
-  height: 20px;
-}
-
-.bubble-row--speaking .wave i {
-  animation: wave 0.9s ease-in-out infinite;
-}
-
-.bubble-row--speaking .wave i:nth-child(2) { animation-delay: 0.12s; }
-.bubble-row--speaking .wave i:nth-child(3) { animation-delay: 0.24s; }
-.bubble-row--speaking .wave i:nth-child(4) { animation-delay: 0.36s; }
-.bubble-row--speaking .wave i:nth-child(5) { animation-delay: 0.48s; }
-
-@keyframes wave {
-  50% {
-    transform: scaleY(0.45);
-  }
-}
-
-/* the floating talk button */
-.fab {
-  position: absolute;
-  right: max(18px, env(safe-area-inset-right));
-  bottom: max(18px, env(safe-area-inset-bottom));
-  z-index: 5;
-  width: 84px;
-  height: 84px;
+.mini-kinly i {
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
-  border: none;
+  background: var(--ink);
+}
+
+/* simulated health readings */
+.vitals__row {
   display: grid;
-  place-items: center;
-  background: var(--orange);
-  color: #fff;
-  box-shadow: var(--orange-glow), 0 2px 6px rgba(0, 0, 0, 0.12);
-  transition: transform 0.15s ease, background 0.3s ease;
-}
-
-.fab:active {
-  transform: scale(0.94);
-}
-
-.fab__icon svg {
-  width: 36px;
-  height: 36px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
-}
-
-.fab--on .fab__icon svg {
-  width: 30px;
-  height: 30px;
-  fill: currentColor;
-  stroke: none;
-}
-
-/* a soft ring pulses while Kinly is talking or listening */
-.fab--on::after {
-  content: "";
-  position: absolute;
-  inset: -8px;
-  border-radius: 50%;
-  border: 3px solid var(--orange-1);
-  animation: ring 1.6s ease-out infinite;
-  pointer-events: none;
-}
-
-@keyframes ring {
-  from {
-    transform: scale(0.92);
-    opacity: 0.9;
-  }
-  to {
-    transform: scale(1.25);
-    opacity: 0;
-  }
-}
-
-/* tools: a row of four rounded squares under the greeting */
-.toolbar {
-  grid-row: 3;
-  grid-column: 1;
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
-  position: relative;
-  z-index: 2;
 }
 
-.tool {
-  position: relative;
-  aspect-ratio: 1;
+.vital {
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
   gap: 6px;
-  max-height: 120px;
-  padding: 8px 4px;
-  border: none;
-  border-radius: 22px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
   background: var(--surface);
-  color: var(--ink);
-  box-shadow: var(--shadow);
-  overflow: hidden;
-  touch-action: none;
-  transition: transform 0.15s ease;
 }
 
-.tool__icon svg {
-  width: 30px;
-  height: 30px;
+.vital__top {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.vital__icon svg {
+  display: block;
+  width: 18px;
+  height: 18px;
   fill: none;
   stroke: currentColor;
   stroke-width: 1.8;
@@ -527,8 +538,159 @@ button {
   stroke-linejoin: round;
 }
 
+.vital--heart .vital__icon {
+  color: #c9372a;
+  animation: beat var(--beat, 0.85s) ease-in-out infinite;
+}
+
+@keyframes beat {
+  0%, 60%, 100% { transform: scale(1); }
+  15% { transform: scale(1.22); }
+  30% { transform: scale(1.05); }
+  42% { transform: scale(1.14); }
+}
+
+.vital--bp .vital__icon { color: #2f6db5; }
+.vital--sugar .vital__icon { color: var(--orange-2); }
+
+.vital__label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vital__value {
+  font-size: clamp(22px, 5.6vw, 30px);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.vital__value small {
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--muted);
+}
+
+.vital__foot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--muted);
+  min-width: 0;
+}
+
+.vital__dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #4f9a5f;
+}
+
+.vital__dot--watch {
+  background: var(--orange-1);
+}
+
+.spark {
+  margin-left: auto;
+  flex: none;
+  overflow: visible;
+}
+
+.spark path {
+  fill: none;
+  stroke: var(--faint);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.spark circle {
+  fill: var(--ink);
+}
+
+.vitals__note {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+/* "On your mind": four tools */
+.mind__label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 12px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.mind__label .eyebrow {
+  font-size: 12.5px;
+  color: var(--ink);
+}
+
+.mind__rule {
+  width: 34px;
+  height: 1px;
+  background: var(--line);
+}
+
+.toolbar {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.tool {
+  position: relative;
+  min-height: 92px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 4px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgba(20, 20, 20, 0.03);
+  overflow: hidden;
+  touch-action: none;
+  transition: transform 0.15s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.tool:hover {
+  border-color: #d6d2cb;
+  box-shadow: var(--shadow);
+}
+
+.tool:active {
+  transform: scale(0.97);
+}
+
+.tool__icon svg {
+  display: block;
+  width: 28px;
+  height: 28px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .tool__label {
-  font-size: clamp(12px, 3.3vw, 17px);
+  font-size: clamp(12px, 3.4vw, 17px);
   font-weight: 700;
   position: relative;
   max-width: 100%;
@@ -554,20 +716,18 @@ button {
 }
 
 .tool--help {
-  background: var(--help);
-  color: #fff;
-  box-shadow: 0 10px 26px rgba(201, 55, 42, 0.3);
+  border-color: rgba(201, 55, 42, 0.45);
+  color: var(--help);
 }
 
 .tool--help .tool__icon svg {
-  fill: currentColor;
-  stroke: none;
+  stroke-width: 3.4;
 }
 
 .tool__fill {
   position: absolute;
   inset: 0;
-  background: var(--help-dark);
+  background: var(--help);
   transform: scaleY(0);
   transform-origin: bottom;
   z-index: 0;
@@ -577,9 +737,326 @@ button {
   z-index: 1;
 }
 
+.tool--holding {
+  color: #fff;
+}
+
 .tool--holding .tool__fill {
   transform: scaleY(1);
   transition: transform 1s linear;
+}
+
+/* what Kinly said */
+.said {
+  padding: 18px 20px;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.said__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.said__head .mini-kinly {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: var(--soft);
+  border: none;
+}
+
+.said__head strong {
+  font-size: 16px;
+}
+
+.said__when {
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.said__text {
+  margin: 14px 0 0;
+  font-size: var(--said-size);
+  font-weight: 500;
+  letter-spacing: -0.025em;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  animation: pop 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+.said__foot {
+  margin: 14px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  font-size: 15px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.said__you {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.star {
+  color: var(--orange-1);
+}
+
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/* a small waveform that moves while Kinly speaks */
+.wave {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 22px;
+}
+
+.wave i {
+  width: 2.5px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--faint);
+}
+
+.wave i:nth-child(2),
+.wave i:nth-child(4) {
+  height: 14px;
+}
+
+.wave i:nth-child(3) {
+  height: 20px;
+}
+
+.said--speaking .wave i {
+  background: var(--orange-1);
+  animation: wave 0.9s ease-in-out infinite;
+}
+
+.said--speaking .wave i:nth-child(2) { animation-delay: 0.12s; }
+.said--speaking .wave i:nth-child(3) { animation-delay: 0.24s; }
+.said--speaking .wave i:nth-child(4) { animation-delay: 0.36s; }
+.said--speaking .wave i:nth-child(5) { animation-delay: 0.48s; }
+
+@keyframes wave {
+  50% {
+    transform: scaleY(0.45);
+  }
+}
+
+/* "Let's talk": pinned to the bottom on phones */
+.talk-dock {
+  position: fixed;
+  z-index: 6;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 26px max(16px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  background: linear-gradient(to top, var(--bg) 72%, transparent);
+}
+
+.talk-dock > * {
+  max-width: 640px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.talk-status {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  font-size: 15px;
+  color: var(--muted);
+}
+
+.talk-status i {
+  background: #a9a6a0;
+  box-shadow: none;
+}
+
+.talk {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 18px 10px 10px;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  text-align: left;
+  box-shadow: var(--shadow-lg);
+  transition: transform 0.15s ease, border-color 0.2s ease;
+}
+
+.talk:active {
+  transform: scale(0.985);
+}
+
+.talk__icon {
+  position: relative;
+  flex: none;
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  background: var(--orange);
+  color: #fff;
+  box-shadow: var(--orange-glow);
+}
+
+.talk__icon svg {
+  width: 30px;
+  height: 30px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.talk--on .talk__icon svg {
+  width: 24px;
+  height: 24px;
+  fill: currentColor;
+  stroke: none;
+}
+
+.talk--on {
+  border-color: rgba(232, 105, 15, 0.45);
+}
+
+/* a soft ring pulses while Kinly is talking or listening */
+.talk--on .talk__icon::after {
+  content: "";
+  position: absolute;
+  inset: -7px;
+  border-radius: 21px;
+  border: 2.5px solid var(--orange-1);
+  animation: ring 1.6s ease-out infinite;
+  pointer-events: none;
+}
+
+@keyframes ring {
+  from {
+    transform: scale(0.94);
+    opacity: 0.9;
+  }
+  to {
+    transform: scale(1.22);
+    opacity: 0;
+  }
+}
+
+.talk__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.talk__text strong {
+  font-size: 21px;
+  letter-spacing: -0.02em;
+}
+
+.talk__text small {
+  font-size: 15px;
+  color: var(--muted);
+}
+
+.talk__arrow {
+  margin-left: auto;
+  color: var(--ink);
+}
+
+.talk__arrow svg {
+  display: block;
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* or type instead */
+.type__link {
+  padding: 6px 0;
+  border: none;
+  background: none;
+  font-size: 16px;
+  color: var(--muted);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-decoration-color: var(--line);
+}
+
+.type__form {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.type__form input {
+  flex: 1;
+  min-width: 0;
+  min-height: 52px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  font-size: 18px;
+  user-select: text;
+}
+
+.type__send {
+  min-height: 52px;
+  padding: 0 20px;
+  border-radius: 999px;
+  border: none;
+  background: var(--ink);
+  color: var(--bg);
+  font-weight: 700;
+}
+
+.type__send:disabled {
+  opacity: 0.4;
+}
+
+.type__close {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: var(--soft);
+  font-size: 22px;
+  line-height: 1;
+}
+
+.elder__foot {
+  display: none;
 }
 
 /* moods */
@@ -587,7 +1064,10 @@ button {
   --bg: #111214;
   --ink: #f2f2f0;
   --muted: #9a9a98;
-  --surface: #1d1e21;
+  --faint: #6f6f6d;
+  --surface: #1b1c1f;
+  --soft: #26272b;
+  --line: #2b2c30;
   background: var(--bg);
   color: var(--ink);
 }
@@ -596,97 +1076,277 @@ button {
   filter: brightness(0.5);
 }
 
-.elder--sleeping .fab:not(.fab--on) {
-  background: #2a2b2f;
+.elder--sleeping .stage__rings i:nth-child(3) {
+  background: none;
+}
+
+.elder--sleeping .display__name {
+  color: #77746f;
+}
+
+.elder--sleeping .talk:not(.talk--on) .talk__icon {
+  background: #2c2d31;
   box-shadow: none;
 }
 
-.elder--concerned .fab:not(.fab--on) {
+.elder--concerned .talk:not(.talk--on) .talk__icon {
   background: var(--help);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .bubble,
-  .bubble-row--speaking .wave i,
-  .fab--on::after {
+  .said__text,
+  .said--speaking .wave i,
+  .talk--on .talk__icon::after,
+  .vital--heart .vital__icon,
+  .presence--on i {
     animation: none;
   }
 }
 
-/* narrow phones: let the squares grow a little taller so labels always show */
+/* phones: the three readings stay readable side by side */
+@media (max-width: 599px) {
+  .vital__label {
+    white-space: normal;
+    line-height: 1.15;
+  }
+  .vital__value small {
+    display: block;
+    margin-top: 4px;
+  }
+  .vital .spark {
+    display: none;
+  }
+  .elder__hello .lead {
+    display: none;
+  }
+}
+
+/* narrow phones */
 @media (max-width: 380px) {
-  .toolbar {
-    gap: 8px;
+  .elder {
+    padding-left: 14px;
+    padding-right: 14px;
+    gap: 16px;
+  }
+  .toolbar,
+  .vitals__row {
+    gap: 7px;
   }
   .tool {
-    aspect-ratio: auto;
-    min-height: 74px;
+    min-height: 78px;
     padding: 8px 2px;
-    border-radius: 18px;
+    border-radius: 16px;
   }
   .tool__icon svg {
-    width: 26px;
-    height: 26px;
+    width: 25px;
+    height: 25px;
   }
   .tool__label {
     font-size: 11.5px;
     letter-spacing: -0.01em;
   }
+  .vital {
+    padding: 10px 9px;
+  }
+  .vital__label {
+    font-size: 11.5px;
+  }
+  .vital__value {
+    font-size: 19px;
+  }
+  .vital__value small {
+    display: block;
+    margin-top: 3px;
+    font-size: 11px;
+  }
+  .spark {
+    display: none;
+  }
+  .talk__icon {
+    width: 54px;
+    height: 54px;
+  }
+  .talk__text strong {
+    font-size: 19px;
+  }
+  .talk__text small {
+    font-size: 13.5px;
+  }
 }
 
-/* tablets and landscape: robot on the left; greeting, tools and chat on the right */
-@media (orientation: landscape) and (min-width: 700px) {
+/* tablets held sideways and desktops: two columns like a calm magazine page */
+@media (orientation: landscape) and (min-width: 700px), (min-width: 1100px) {
   .elder {
-    grid-template-columns: minmax(0, 1.1fr) minmax(320px, 1fr);
-    grid-template-rows: auto auto auto minmax(0, 1fr);
-    column-gap: 32px;
+    display: grid;
+    grid-template-columns: minmax(0, 1.12fr) minmax(360px, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    column-gap: clamp(32px, 6vw, 120px);
+    row-gap: 0;
+    overflow: hidden;
+    padding: max(20px, env(safe-area-inset-top)) clamp(20px, 5vw, 96px) max(16px, env(safe-area-inset-bottom));
   }
   .elder__top {
     grid-column: 1 / -1;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--line);
   }
   .elder__stage {
     grid-column: 1;
-    grid-row: 2 / -1;
+    grid-row: 2;
+    height: auto;
+    margin: 3vh 0 2vh;
   }
-  .elder__hello {
+  .stage__eyebrow {
+    display: block;
+    position: relative;
+    z-index: 1;
+    font-size: 12.5px;
+  }
+  .stage__tag {
+    display: flex;
+    position: relative;
+    margin-bottom: 14px;
+  }
+  /* the readings sit under Kinly on the stage, keeping the right column calm */
+  .vitals--side {
+    display: none;
+  }
+  .vitals--stage {
+    display: block;
+    order: 0;
+    position: relative;
+    z-index: 1;
+    margin-bottom: 16px;
+  }
+  .vitals--stage .vital {
+    background: color-mix(in srgb, var(--surface) 82%, transparent);
+    backdrop-filter: blur(6px);
+  }
+  .stage__rings {
+    inset: 0 0 64px;
+  }
+  .elder__side {
     grid-column: 2;
     grid-row: 2;
-    padding-top: 2vh;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: clamp(10px, 1.8vh, 24px);
+    overflow-y: auto;
+    padding: 2.4vh 4px 1vh;
+    scrollbar-width: thin;
   }
-  .elder__hello .eyebrow {
-    display: inline;
+  .elder__side > * {
+    flex: none;
+    order: 0;
   }
   .elder__hello .display {
-    margin: 10px 0 12px;
-    font-size: clamp(40px, 5vw, 72px);
+    font-size: clamp(40px, min(5.4vw, 7.6vh), 96px);
+    margin: 12px 0 12px;
   }
   .toolbar {
-    grid-column: 2;
-    grid-row: 3;
-    gap: 14px;
+    gap: 12px;
+  }
+  .tool {
+    min-height: 0;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 12px;
+    padding: clamp(14px, 2.4vh, 26px) 16px;
+    border-radius: 14px;
   }
   .tool__icon svg {
-    width: 36px;
-    height: 36px;
+    width: 22px;
+    height: 22px;
   }
   .tool__label {
-    font-size: clamp(13px, 1.3vw, 18px);
+    font-size: clamp(13px, 1.1vw, 17px);
   }
-  .chat {
-    grid-column: 2;
-    grid-row: 4;
-    align-self: start;
-    padding-top: 6px;
-    padding-bottom: 0;
+  .vital__value {
+    font-size: clamp(22px, 2vw, 30px);
+  }
+  /* the talk card stays in view at the bottom of the column if it scrolls */
+  .talk-dock {
+    position: sticky;
+    bottom: 0;
+    order: 1;
+    padding: 10px 0 2px;
+    background: linear-gradient(to top, var(--bg) 85%, transparent);
+  }
+  .elder__side > .type {
+    order: 2;
+  }
+  .talk-dock > * {
+    max-width: none;
+  }
+  .talk-status {
+    display: flex;
+  }
+  .talk {
+    box-shadow: var(--shadow);
+  }
+  .elder {
+    --said-size: clamp(19px, min(1.7vw, 2.9vh), 28px);
+  }
+  .said {
+    padding: 16px 20px;
+  }
+  .said__text {
+    margin-top: 10px;
+  }
+  .said__foot {
+    margin-top: 10px;
+    padding-top: 10px;
+  }
+  .talk-status {
+    margin-bottom: 8px;
+  }
+  .type {
+    margin-top: -8px;
+  }
+  .elder__foot {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 14px;
+    border-top: 1px solid var(--line);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+}
+
+/* narrower landscape tablets: the tool tiles stack their icon above the label */
+@media (orientation: landscape) and (min-width: 700px) and (max-width: 1599px) {
+  .tool {
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+    padding: clamp(10px, 1.6vh, 18px) 4px;
+  }
+}
+
+@media (orientation: landscape) and (min-width: 700px) and (max-width: 1180px) {
+  .vital {
+    padding: 10px 10px;
+  }
+  .spark {
+    display: none;
   }
 }
 
 /* short screens (phones held sideways) */
 @media (orientation: landscape) and (max-height: 520px) {
   .elder {
-    gap: 8px;
     padding-top: max(8px, env(safe-area-inset-top));
     padding-bottom: max(8px, env(safe-area-inset-bottom));
+  }
+  .elder__top {
+    padding-bottom: 8px;
   }
   .clock__time {
     font-size: 34px;
@@ -695,32 +1355,31 @@ button {
     font-size: 12px;
   }
   .elder__hello .eyebrow,
-  .elder__hello .lead {
+  .elder__hello .lead,
+  .stage__eyebrow,
+  .stage__tag,
+  .elder__foot,
+  .vitals__note {
     display: none;
   }
-  .elder__hello {
-    padding-top: 0;
+  .elder__stage {
+    margin: 8px 0 0;
+  }
+  .stage__rings {
+    inset: 0 0 52px;
+  }
+  .elder__side {
+    padding-top: 10px;
   }
   .elder__hello .display {
     margin: 0;
     font-size: 30px;
   }
-  .tool {
-    max-height: 86px;
-  }
-  .tool__icon svg {
-    width: 26px;
-    height: 26px;
-  }
-  .fab {
-    width: 68px;
-    height: 68px;
-  }
-  .bubble--kinly {
-    -webkit-line-clamp: 2;
-  }
-  .bubble--me {
+  .elder__hello .display br {
     display: none;
+  }
+  .said__text {
+    -webkit-line-clamp: 2;
   }
   .sheet__head {
     padding-top: max(8px, env(safe-area-inset-top));
@@ -729,6 +1388,40 @@ button {
   .sheet__close {
     min-height: 48px;
   }
+}
+
+/* ---------- family dashboard: simulated readings ---------- */
+.vitals-card h2 .pill {
+  margin-left: 8px;
+  vertical-align: middle;
+  background: var(--warn-bg);
+  color: var(--warn);
+}
+
+.vitals-card__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.vital--wide {
+  padding: 16px 18px;
+  gap: 8px;
+}
+
+.vital--wide .vital__value {
+  font-size: 32px;
+}
+
+.vital--wide .spark {
+  margin: 4px 0 0;
+  width: 100%;
+  height: 36px;
+}
+
+.vitals-card__note {
+  margin: 12px 0 0;
+  font-size: 14px;
 }
 
 /* ---------- sheets and overlays ---------- */
@@ -748,7 +1441,7 @@ button {
 
 .elder--sleeping .sheet,
 .elder--sleeping .overlay {
-  --bg: #f6f6f5;
+  --bg: #f5f3ef;
   --ink: #141414;
   --muted: #6b6b69;
   --surface: #fff;

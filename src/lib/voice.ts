@@ -29,6 +29,8 @@ export interface VoiceEngine {
   activeTool: string | null;
   start: (options?: StartOptions) => void;
   stop: () => void;
+  /** Typed words for Kinly ("Or type instead"); starts a conversation if none is on. */
+  send: (text: string) => void;
   /** 0–1 loudness of Kinly's voice, read every animation frame. */
   getVolume: () => number;
 }

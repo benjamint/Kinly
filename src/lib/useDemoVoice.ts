@@ -104,22 +104,7 @@ export function useDemoVoice(
       let got = false;
       r.onresult = (e) => {
         got = true;
-        const text = e.results[0]?.[0]?.transcript ?? "";
-        setHeard(text);
-        setState("thinking");
-        const h = householdRef.current;
-        if (!h || id !== session.current) return;
-        silences.current = 0;
-        const reply = respond(h, text, context.current);
-        context.current = reply.context;
-        const tool = reply.actions.find((a) => a.type === "raiseAlert") ? "raise_alert" : null;
-        setActiveTool(tool);
-        void dispatch(...reply.actions);
-        speak(reply.say, id, () => {
-          setActiveTool(null);
-          if (reply.end) stop();
-          else listen(id);
-        });
+        reply(e.results[0]?.[0]?.transcript ?? "", id);
       };
       r.onerror = (e) => {
         if (id !== session.current) return;
@@ -142,7 +127,45 @@ export function useDemoVoice(
         stop();
       }
     },
+    [speak, stop],
+  );
+
+  // What the person said (or typed): answer it, then carry on listening.
+  const reply = useCallback(
+    (text: string, id: number) => {
+      setHeard(text);
+      setState("thinking");
+      const h = householdRef.current;
+      if (!h || id !== session.current) return;
+      silences.current = 0;
+      const answer = respond(h, text, context.current);
+      context.current = answer.context;
+      const tool = answer.actions.find((a) => a.type === "raiseAlert") ? "raise_alert" : null;
+      setActiveTool(tool);
+      void dispatch(...answer.actions);
+      speak(answer.say, id, () => {
+        setActiveTool(null);
+        if (answer.end) stop();
+        else listenRef.current(id);
+      });
+    },
     [dispatch, speak, stop],
+  );
+  const listenRef = useRef(listen);
+  listenRef.current = listen;
+
+  /** Typed words: answered like spoken ones, whether or not a conversation is on. */
+  const send = useCallback(
+    (text: string) => {
+      if (!householdRef.current || !text.trim()) return;
+      recognition.current?.abort();
+      recognition.current = null;
+      if (typeof speechSynthesis !== "undefined") speechSynthesis.cancel();
+      const id = ++session.current;
+      setError(null);
+      reply(text.trim(), id);
+    },
+    [reply],
   );
 
   const start = useCallback(
@@ -175,5 +198,5 @@ export function useDemoVoice(
     return 0.15 + syllables * 0.6;
   }, []);
 
-  return { state, caption, heard, error, activeTool, start, stop, getVolume };
+  return { state, caption, heard, error, activeTool, start, stop, send, getVolume };
 }

@@ -7,6 +7,7 @@ import { timeAgo } from "../elder/Sheets";
 import { AlertsCard } from "./AlertsCard";
 import { ActivitiesCard, ComingUpCard, EngagementSettings } from "./EngagementCards";
 import { LookCard } from "./LookCard";
+import { VitalsCard } from "../elder/Vitals";
 
 const ME_KEY = "kinly.familyMe";
 
@@ -119,6 +120,8 @@ function DashboardView({
       )}
 
       <AlertsCard me={me} />
+
+      <VitalsCard household={household} now={now} />
 
       <div className="dash__grid">
         <section className="card" aria-labelledby="today-h">

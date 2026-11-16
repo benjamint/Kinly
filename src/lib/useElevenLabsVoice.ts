@@ -35,6 +35,8 @@ export function useElevenLabsVoice(
   // Set by stop(): a start that is still getting the microphone or a token,
   // or a session still connecting, must not carry on and start talking.
   const cancelled = useRef(false);
+  // Typed words waiting for the session to connect ("Or type instead").
+  const pendingText = useRef<string | null>(null);
 
   const conversation = useConversation({
     onConnect: () => {
@@ -46,6 +48,9 @@ export function useElevenLabsVoice(
       const note = pendingContext.current;
       pendingContext.current = null;
       if (note) conversationRef.current?.sendContextualUpdate(note);
+      const typed = pendingText.current;
+      pendingText.current = null;
+      if (typed) conversationRef.current?.sendUserMessage(typed);
     },
     onMessage: (m) => {
       if (m.role === "agent") {
@@ -140,7 +145,19 @@ export function useElevenLabsVoice(
     error,
     activeTool,
     start: (o) => void start(o),
+    send: (text) => {
+      const t = text.trim();
+      if (!t) return;
+      setHeard(t);
+      setThinking(true);
+      if (conversation.status === "connected") conversation.sendUserMessage(t);
+      else {
+        pendingText.current = t;
+        if (conversation.status !== "connecting" && !starting) void start();
+      }
+    },
     stop: () => {
+      pendingText.current = null;
       cancelled.current = true;
       setStarting(false);
       clearTimeout(capTimer.current);
