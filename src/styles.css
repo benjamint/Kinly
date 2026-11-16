@@ -123,8 +123,7 @@ button {
 
 /* ---------- buttons ---------- */
 
-.big-button,
-.talk {
+.big-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -142,14 +141,12 @@ button {
 }
 
 .big-button:active,
-.talk:active,
 .tool:active,
 .tile:active {
   transform: scale(0.98);
 }
 
-.big-button--primary,
-.talk {
+.big-button--primary {
   background: var(--orange);
   color: #fff;
   box-shadow: var(--orange-glow);
@@ -181,8 +178,8 @@ button {
   height: 100dvh;
   overflow: hidden;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto auto;
-  gap: 12px;
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+  gap: 14px;
   padding: max(16px, env(safe-area-inset-top)) 18px max(16px, env(safe-area-inset-bottom));
   background: var(--bg);
   transition: background 1.2s ease, color 1.2s ease;
@@ -224,18 +221,28 @@ button {
   gap: 8px;
 }
 
-/* big greeting, only where there's room (tablets, landscape) */
+/* greeting */
 .elder__hello {
+  grid-row: 2;
+  grid-column: 1;
+}
+
+.elder__hello .eyebrow {
   display: none;
 }
 
 .elder__hello .display {
-  margin: 10px 0 14px;
-  font-size: clamp(40px, 5.2vw, 72px);
+  margin: 0 0 6px;
+  font-size: clamp(32px, 8.4vw, 72px);
 }
 
+.elder__hello .lead {
+  font-size: clamp(17px, 4.2vw, 24px);
+}
+
+/* the robot fills what's left; chat bubbles sit over its lower part */
 .elder__stage {
-  grid-row: 2;
+  grid-row: 4;
   grid-column: 1;
   position: relative;
   min-height: 0;
@@ -260,22 +267,23 @@ button {
   transition: filter 1.2s ease;
 }
 
-/* conversation bubbles, over the lower part of the stage */
 .chat {
-  grid-row: 2;
+  grid-row: 4;
   grid-column: 1;
   align-self: end;
   position: relative;
   display: flex;
   flex-direction: column;
   gap: 10px;
+  /* sit above the floating talk button */
+  padding-bottom: 96px;
   pointer-events: none;
   z-index: 2;
 }
 
 .bubble {
   margin: 0;
-  max-width: min(86%, 560px);
+  max-width: min(100%, 560px);
   padding: 14px 20px;
   border-radius: 22px;
   line-height: 1.35;
@@ -346,21 +354,10 @@ button {
   animation: wave 0.9s ease-in-out infinite;
 }
 
-.bubble-row--speaking .wave i:nth-child(2) {
-  animation-delay: 0.12s;
-}
-
-.bubble-row--speaking .wave i:nth-child(3) {
-  animation-delay: 0.24s;
-}
-
-.bubble-row--speaking .wave i:nth-child(4) {
-  animation-delay: 0.36s;
-}
-
-.bubble-row--speaking .wave i:nth-child(5) {
-  animation-delay: 0.48s;
-}
+.bubble-row--speaking .wave i:nth-child(2) { animation-delay: 0.12s; }
+.bubble-row--speaking .wave i:nth-child(3) { animation-delay: 0.24s; }
+.bubble-row--speaking .wave i:nth-child(4) { animation-delay: 0.36s; }
+.bubble-row--speaking .wave i:nth-child(5) { animation-delay: 0.48s; }
 
 @keyframes wave {
   50% {
@@ -368,68 +365,89 @@ button {
   }
 }
 
-/* main action */
-.elder__talk {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  position: relative;
-  z-index: 2;
+/* the floating talk button */
+.fab {
+  position: absolute;
+  right: max(18px, env(safe-area-inset-right));
+  bottom: max(18px, env(safe-area-inset-bottom));
+  z-index: 5;
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  border: none;
+  display: grid;
+  place-items: center;
+  background: var(--orange);
+  color: #fff;
+  box-shadow: var(--orange-glow), 0 2px 6px rgba(0, 0, 0, 0.12);
+  transition: transform 0.15s ease, background 0.3s ease;
 }
 
-.talk {
-  min-width: min(100%, 360px);
-  min-height: 76px;
-  font-size: clamp(22px, 5vw, 26px);
+.fab:active {
+  transform: scale(0.94);
 }
 
-.talk__icon svg {
-  width: 28px;
-  height: 28px;
+.fab__icon svg {
+  width: 36px;
+  height: 36px;
   fill: none;
   stroke: currentColor;
   stroke-width: 2;
   stroke-linecap: round;
 }
 
-.talk--on {
-  background: var(--ink);
-  box-shadow: var(--shadow-lg);
-}
-
-.talk--on .talk__icon svg {
+.fab--on .fab__icon svg {
+  width: 30px;
+  height: 30px;
   fill: currentColor;
   stroke: none;
 }
 
-.talk__note {
-  margin: 0;
-  font-size: 16px;
-  color: var(--muted);
-  text-align: center;
+/* a soft ring pulses while Kinly is talking or listening */
+.fab--on::after {
+  content: "";
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  border: 3px solid var(--orange-1);
+  animation: ring 1.6s ease-out infinite;
+  pointer-events: none;
 }
 
-/* tools */
+@keyframes ring {
+  from {
+    transform: scale(0.92);
+    opacity: 0.9;
+  }
+  to {
+    transform: scale(1.25);
+    opacity: 0;
+  }
+}
+
+/* tools: a row of four rounded squares under the greeting */
 .toolbar {
+  grid-row: 3;
+  grid-column: 1;
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
   position: relative;
   z-index: 2;
 }
 
 .tool {
   position: relative;
+  aspect-ratio: 1;
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  min-height: 72px;
-  padding: 10px 16px;
+  gap: 6px;
+  max-height: 120px;
+  padding: 8px 4px;
   border: none;
-  border-radius: 999px;
+  border-radius: 22px;
   background: var(--surface);
   color: var(--ink);
   box-shadow: var(--shadow);
@@ -439,8 +457,8 @@ button {
 }
 
 .tool__icon svg {
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   fill: none;
   stroke: currentColor;
   stroke-width: 1.8;
@@ -449,24 +467,28 @@ button {
 }
 
 .tool__label {
-  font-size: clamp(18px, 4.2vw, 22px);
+  font-size: clamp(12px, 3.3vw, 17px);
   font-weight: 700;
   position: relative;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .tool__count {
   position: absolute;
-  top: 8px;
-  left: 14px;
-  min-width: 24px;
-  height: 24px;
-  padding: 0 7px;
+  top: 7px;
+  right: 7px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
   border-radius: 999px;
   display: grid;
   place-items: center;
   background: var(--orange-2);
   color: #fff;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
 }
 
@@ -485,8 +507,8 @@ button {
   position: absolute;
   inset: 0;
   background: var(--help-dark);
-  transform: scaleX(0);
-  transform-origin: left;
+  transform: scaleY(0);
+  transform-origin: bottom;
   z-index: 0;
 }
 
@@ -495,7 +517,7 @@ button {
 }
 
 .tool--holding .tool__fill {
-  transform: scaleX(1);
+  transform: scaleY(1);
   transition: transform 1s linear;
 }
 
@@ -513,39 +535,50 @@ button {
   filter: brightness(0.5);
 }
 
-.elder--sleeping .talk {
+.elder--sleeping .fab:not(.fab--on) {
   background: #2a2b2f;
   box-shadow: none;
 }
 
-.elder--concerned .talk:not(.talk--on) {
+.elder--concerned .fab:not(.fab--on) {
   background: var(--help);
 }
 
 @media (prefers-reduced-motion: reduce) {
   .bubble,
-  .bubble-row--speaking .wave i {
+  .bubble-row--speaking .wave i,
+  .fab--on::after {
     animation: none;
   }
 }
 
-/* narrow phones */
-@media (max-width: 360px) {
-  .tool__label {
-    font-size: 16px;
+/* narrow phones: let the squares grow a little taller so labels always show */
+@media (max-width: 380px) {
+  .toolbar {
+    gap: 8px;
   }
   .tool {
-    gap: 8px;
-    padding: 10px;
+    aspect-ratio: auto;
+    min-height: 74px;
+    padding: 8px 2px;
+    border-radius: 18px;
+  }
+  .tool__icon svg {
+    width: 26px;
+    height: 26px;
+  }
+  .tool__label {
+    font-size: 11.5px;
+    letter-spacing: -0.01em;
   }
 }
 
-/* tablets and landscape: robot on the left, conversation and tools on the right */
+/* tablets and landscape: robot on the left; greeting, tools and chat on the right */
 @media (orientation: landscape) and (min-width: 700px) {
   .elder {
-    grid-template-columns: minmax(0, 1.15fr) minmax(300px, 1fr);
-    grid-template-rows: auto minmax(0, 1fr) auto auto;
-    column-gap: 28px;
+    grid-template-columns: minmax(0, 1.1fr) minmax(320px, 1fr);
+    grid-template-rows: auto auto auto minmax(0, 1fr);
+    column-gap: 32px;
   }
   .elder__top {
     grid-column: 1 / -1;
@@ -554,53 +587,73 @@ button {
     grid-column: 1;
     grid-row: 2 / -1;
   }
-  .chat {
-    grid-column: 2;
-    grid-row: 2;
-    align-self: end;
-  }
   .elder__hello {
-    display: block;
     grid-column: 2;
     grid-row: 2;
-    align-self: start;
     padding-top: 2vh;
   }
-  .elder__talk {
-    grid-column: 2;
-    grid-row: 3;
+  .elder__hello .eyebrow {
+    display: inline;
+  }
+  .elder__hello .display {
+    margin: 10px 0 12px;
+    font-size: clamp(40px, 5vw, 72px);
   }
   .toolbar {
     grid-column: 2;
+    grid-row: 3;
+    gap: 14px;
+  }
+  .tool__icon svg {
+    width: 36px;
+    height: 36px;
+  }
+  .tool__label {
+    font-size: clamp(13px, 1.3vw, 18px);
+  }
+  .chat {
+    grid-column: 2;
     grid-row: 4;
+    align-self: start;
+    padding-top: 6px;
+    padding-bottom: 0;
   }
 }
 
 /* short screens (phones held sideways) */
 @media (orientation: landscape) and (max-height: 520px) {
-  .elder__hello {
-    display: none !important;
-  }
   .elder {
     gap: 8px;
     padding-top: max(8px, env(safe-area-inset-top));
     padding-bottom: max(8px, env(safe-area-inset-bottom));
   }
   .clock__time {
-    font-size: 38px;
+    font-size: 34px;
   }
   .clock__day {
     font-size: 12px;
   }
-  .talk {
-    min-height: 58px;
-    font-size: 20px;
-  }
-  .talk__note {
+  .elder__hello .eyebrow,
+  .elder__hello .lead {
     display: none;
   }
+  .elder__hello {
+    padding-top: 0;
+  }
+  .elder__hello .display {
+    margin: 0;
+    font-size: 30px;
+  }
   .tool {
-    min-height: 54px;
+    max-height: 86px;
+  }
+  .tool__icon svg {
+    width: 26px;
+    height: 26px;
+  }
+  .fab {
+    width: 68px;
+    height: 68px;
   }
   .bubble--kinly {
     -webkit-line-clamp: 2;
@@ -1687,4 +1740,105 @@ button {
   color: var(--help);
   font-weight: 700;
   font-size: 17px;
+}
+
+/* ---------- Kinly's look (dashboard) ---------- */
+
+.look__grid {
+  display: grid;
+  grid-template-columns: minmax(180px, 280px) 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 640px) {
+  .look__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.look__preview {
+  aspect-ratio: 400 / 520;
+  max-height: 360px;
+  margin: 0 auto;
+  width: 100%;
+  border-radius: 20px;
+  background: var(--bg);
+}
+
+.look__label {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.look__label:not(:first-child) {
+  margin-top: 18px;
+}
+
+.look__presets,
+.look__swag {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.swatch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: none;
+  background: var(--soft);
+  font-weight: 600;
+}
+
+.swatch[aria-pressed="true"] {
+  background: var(--ink);
+  color: #fff;
+}
+
+.swatch__dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 3px solid;
+}
+
+.look__colors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.look__colors label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.look__colors input[type="color"] {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+}
+
+.look .form__actions {
+  margin-top: 20px;
+}
+
+.look .btn:disabled {
+  opacity: 0.55;
+  box-shadow: none;
 }

@@ -36,6 +36,10 @@ Without ElevenLabs configured, Kinly uses a **practice voice**: the phone's own 
 
 To change Kinly's personality or tools later, edit `agent/prompt.ts` or `agent/tools.json`, push, and press the setup button again (it updates the agent instead of making a new one). You can also choose the voice and model in the ElevenLabs dashboard, or set `ELEVENLABS_VOICE_ID`, `ELEVENLABS_TTS_MODEL` and `KINLY_AGENT_LLM` in Vercel. Pick the newest Claude model the agent settings list, and check that your TTS model supports Kiswahili before switching a household to it.
 
+## Kinly's look
+
+Families change Kinly's colours and accessories ("swag": bow tie, kente scarf, headphones, kufi cap, flower, beads) on the dashboard under **Kinly's look**, with a live preview; it's saved for the whole household. The defaults, colour presets and accessory list live in `src/shared/robotLook.ts` (change `DEFAULT_LOOK` to change Kinly for everyone); accessories are drawn in `src/elder/KinlyRobot.tsx`.
+
 ## Keeping voice costs down
 
 Live voice (ElevenLabs) is billed per minute. Families can set **Live voice minutes for chatting, per day** on the dashboard. Help and medicine reminders always use the live voice; once the day's chat minutes are used, chatting continues with the free practice voice. Activities never use the live voice. Today's usage is shown on the dashboard.

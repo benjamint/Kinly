@@ -121,6 +121,11 @@ export function ElderScreen() {
   const active = live && engine === "live" ? liveVoice : demoVoice;
   const voice: VoiceEngine = {
     ...active,
+    // Stop whichever voice is running (a start may have fallen back to the free voice).
+    stop: () => {
+      liveVoice.stop();
+      demoVoice.stop();
+    },
     start: (options: StartOptions = {}) => {
       const essential = options.purpose === "help" || options.purpose === "reminder";
       if (live && (essential || !capUsed)) {
@@ -221,36 +226,8 @@ export function ElderScreen() {
         <h2 className="display">{greeting}</h2>
         <p className="lead">
           <strong>{sw ? "Ongea tu." : "Just talk."}</strong>{" "}
-          {sw ? "Gusa kitufe na uniulize chochote." : "Tap the button and ask me anything."}
+          {sw ? "Gusa kitufe cha machungwa." : "Tap the orange button."}
         </p>
-      </div>
-
-      <section className="elder__stage">
-        <button className="elder__robot" onClick={onFaceTap} aria-label={hint}>
-          <KinlyRobot expression={expression} getVolume={voice.getVolume} />
-        </button>
-      </section>
-
-      <div className="chat" aria-live="polite">
-        {chat && voice.heard && <p className="bubble bubble--me">{voice.heard}</p>}
-        {chat && voice.caption && (
-          <div className={`bubble-row${expression === "speaking" ? " bubble-row--speaking" : ""}`}>
-            <span className="wave" aria-hidden="true">
-              <i /><i /><i /><i /><i />
-            </span>
-            <p className="bubble bubble--kinly" style={{ fontSize: `calc(var(--bubble-size) * ${household.elder.captionScale})` }}>
-              {voice.caption}
-            </p>
-          </div>
-        )}
-      </div>
-
-      <div className="elder__talk">
-        <button className={`talk${busy ? " talk--on" : ""}`} onClick={onFaceTap}>
-          <span className="talk__icon" aria-hidden="true">{busy ? ICONS.stop : ICONS.mic}</span>
-          {busy ? (sw ? "Simama" : "Stop") : sw ? "Ongea na Kinly" : "Talk to Kinly"}
-        </button>
-        <p className="talk__note">{hint}</p>
       </div>
 
       <nav className="toolbar" aria-label="Kinly tools">
@@ -286,6 +263,36 @@ export function ElderScreen() {
           }}
         />
       </nav>
+
+      <section className="elder__stage">
+        <button className="elder__robot" onClick={onFaceTap} aria-label={hint}>
+          <KinlyRobot expression={expression} getVolume={voice.getVolume} look={household.elder.robotLook} />
+        </button>
+      </section>
+
+      <div className="chat" aria-live="polite">
+        {chat && voice.heard && <p className="bubble bubble--me">{voice.heard}</p>}
+        {chat && voice.caption && (
+          <div className={`bubble-row${expression === "speaking" ? " bubble-row--speaking" : ""}`}>
+            <span className="wave" aria-hidden="true">
+              <i /><i /><i /><i /><i />
+            </span>
+            <p className="bubble bubble--kinly" style={{ fontSize: `calc(var(--bubble-size) * ${household.elder.captionScale})` }}>
+              {voice.caption}
+            </p>
+          </div>
+        )}
+      </div>
+
+      <button
+        className={`fab${busy ? " fab--on" : ""}`}
+        onClick={onFaceTap}
+        aria-label={busy ? (sw ? "Acha kuongea" : "Stop talking") : sw ? "Ongea na Kinly" : "Talk to Kinly"}
+        title={hint}
+      >
+        <span className="fab__icon" aria-hidden="true">{busy ? ICONS.stop : ICONS.mic}</span>
+      </button>
+
 
       {sheet === "family" && (
         <FamilySheet
