@@ -83,8 +83,8 @@ export default defineConfig(({ mode }) => {
           start_url: "/",
           display: "fullscreen",
           orientation: "any",
-          background_color: "#FFF4E8",
-          theme_color: "#E8875B",
+          background_color: "#F6F6F5",
+          theme_color: "#F6F6F5",
           icons: [
             { src: "/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
             { src: "/icon-192.png", sizes: "192x192", type: "image/png" },

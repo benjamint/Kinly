@@ -76,7 +76,8 @@ function DashboardView({
     <div className="dash">
       <header className="dash__head">
         <div>
-          <h1>{elder}'s Kinly</h1>
+          <span className="eyebrow">Family dashboard</span>
+          <h1>{elder}'s Kinly.</h1>
           <p className="dash__sub">
             {`Household ${household.id}`} ·{" "}
             <Link to="/">Open {elder}'s screen</Link>
@@ -99,7 +100,7 @@ function DashboardView({
           <ul className="list">
             {alerts.map((a) => (
               <li key={a.id} className="row">
-                <div>
+                <div className="grow">
                   <strong>{a.source === "missed" ? "Missed medication" : "Asked for help"}</strong>
                   <p>{a.reason}</p>
                   <p className="muted">{timeAgo(a.at, now.getTime())}</p>

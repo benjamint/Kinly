@@ -27,11 +27,22 @@ export function Setup({ forFamily = false }: { forFamily?: boolean }) {
 
   return (
     <main className="setup">
-      <h1>Kinly</h1>
-      <p className="setup__lead">{forFamily ? "Family dashboard" : "A warm voice to keep you company."}</p>
+      <span className="eyebrow">{forFamily ? "Family dashboard" : "Your companion"}</span>
+      <h1 className="display">Kinly.</h1>
+      <p className="lead">
+        {forFamily ? (
+          <>
+            <strong>Stay close, from anywhere.</strong> See the day, send messages and get alerts when help is needed.
+          </>
+        ) : (
+          <>
+            <strong>A friendly voice at home.</strong> It talks, reminds and keeps the family close.
+          </>
+        )}
+      </p>
 
       <form className="setup__form" onSubmit={join}>
-        <h2>Sign in to your household</h2>
+        <h2>Sign in</h2>
         <label>
           Household code
           <input
